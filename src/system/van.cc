@@ -1,0 +1,324 @@
+#include "system/van.h"
+#include <zmq.h>
+#include "ps/node_info.h"
+#include <net/if.h>
+#include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <netinet/in.h>
+
+namespace ps {
+
+Van::Van() {
+  // start zmq
+  // one need to "sudo ulimit -n 65536" or edit /etc/security/limits.conf if max
+  // socket is limited
+  context_ = zmq_ctx_new();
+  CHECK(context_ != NULL) << "create 0mq context failed";
+  zmq_ctx_set(context_, ZMQ_MAX_SOCKETS, 65536);
+  // zmq_ctx_set(context_, ZMQ_IO_THREADS, 4);
+
+  // get scheduler info
+  scheduler_.set_hostname(std::string(CHECK_NOTNULL(getenv("DMLC_PS_ROOT_URI"))));
+  scheduler_.set_port(atoi(CHECK_NOTNULL(getenv("DMLC_PS_ROOT_PORT"))));
+  scheduler_.set_role(Node::SCHEDULER);
+  scheduler_.set_id(kScheduler);
+
+  // get my node info
+  if (MyNode::IsScheduler()) {
+    my_node_ = scheduler_;
+  } else {
+    auto role = MyNode::IsWorker() ? Node::WORKER : (
+        MyNode::IsServer() ? Node::SERVER : Node::SCHEDULER);
+    std::string interface(getenv("DMLC_INTERFACE"));
+    std::string ip;
+    if (interface.size()) {
+      GetIP(interface, &ip);
+    } else {
+      GetAvailableInterfaceAndIP(&interface, &ip);
+    }
+    int port = GetAvailablePort();
+    CHECK(!ip.empty()) << "failed to get ip";
+    CHECK(!interface.empty()) << "failed to get the interface";
+    CHECK(!port) << "failed to get a port";
+    my_node_.set_role(role);
+    my_node_.set_hostname(ip);
+    my_node_.set_port(port);
+    // cannot determine my id now, but the scheduler will assign it later
+  }
+
+  // bind. do multiple retries on binding the port. since it's possible that
+  // different nodes on the same machine picked the same port. but no retry for
+  // the scheduler
+  receiver_ = zmq_socket(context_, ZMQ_ROUTER);
+  CHECK(receiver_ != NULL)
+      << "create receiver socket failed: " << zmq_strerror(errno);
+  int local = GetEnv("DMLC_LOCAL", 0);
+  std::string addr = local ? "ipc:///tmp/" : "tcp://*:";
+  int max_retry = MyNode::IsScheduler() ? 40 : 1;
+  for (int i = 0; i < max_retry; ++i) {
+    auto address = addr + std::to_string(my_node_.port());
+    if (zmq_bind(receiver_, address.c_str()) == 0) break;
+    CHECK_NE(i, max_retry - 1)
+        << "bind failed after " << max_retry << " retries";
+    srand((int)time(NULL) + my_node_.port());
+    my_node_.set_port(10000 + rand() % 40000);
+  }
+
+  // connect to the scheduler
+  Connect(scheduler_);
+
+  // setup monitor
+  if (MyNode::IsScheduler()) {
+    CHECK(!zmq_socket_monitor(receiver_, "inproc://monitor", ZMQ_EVENT_ALL));
+  } else {
+    CHECK(!zmq_socket_monitor(
+        senders_[scheduler_.id()], "inproc://monitor", ZMQ_EVENT_ALL));
+  }
+  monitor_thread_ = new std::thread(&Van::Monitoring, this);
+  monitor_thread_->detach();
+}
+
+Van::~Van() {
+  for (auto& it : senders_) zmq_close(it.second);
+  zmq_close(receiver_);
+  zmq_ctx_destroy(context_);
+}
+
+void Van::Connect(const Node& node) {
+  CHECK(node.has_id()) << node.ShortDebugString();
+  CHECK(node.has_port()) << node.ShortDebugString();
+  CHECK(node.has_hostname()) << node.ShortDebugString();
+
+  int id = node.id();
+  if (my_node_.hostname() == node.hostname() &&
+      my_node_.port() == node.port()) {
+    // update my id
+    my_node_.set_id(id);
+  }
+
+  if (senders_.find(id) != senders_.end()) {
+    // already connected
+    return;
+  }
+
+  // worker doesn't need to connect to another worker. same for server
+  if ((node.role() == my_node_.role()) &&
+      (node.role() != Node::SCHEDULER)) {
+    return;
+  }
+
+  void *sender = zmq_socket(context_, ZMQ_DEALER);
+  CHECK(sender != NULL)
+      << zmq_strerror(errno)
+      << ". it often can be solved by \"sudo ulimit -n 65536\""
+      << " or edit /etc/security/limits.conf";
+
+  std::string my_id = std::to_string(my_node_.id()); // address(my_node_);
+  zmq_setsockopt(sender, ZMQ_IDENTITY, my_id.data(), my_id.size());
+
+  // connect
+  std::string addr = "tcp://" + node.hostname() + ":" + std::to_string(node.port());
+  if (GetEnv("DMLC_LOCAL", 0)) {
+    addr = "ipc:///tmp/" + std::to_string(node.port());
+  }
+
+  if (zmq_connect(sender, addr.c_str()) != 0) {
+    LOG(FATAL) <<  "connect to " + addr + " failed: " + zmq_strerror(errno);
+  }
+
+  senders_[id] = sender;
+}
+
+size_t Van::Send(const Package& pkg) {
+  // find the socket
+  int id = pkg.recver;
+  auto it = senders_.find(id);
+  if (it == senders_.end()) {
+    LOG(WARNING) << "there is no socket to node " + id;
+    return -1;
+  }
+  void *socket = it->second;
+
+  // double check
+  bool has_key = !pkg.key.empty();
+  CHECK_EQ(has_key, pkg.meta.with_key());
+  int n = has_key + pkg.value.size();
+
+  // send meta
+  int meta_size = pkg.meta.ByteSize();
+  char* meta_buf = new char[meta_size+5];
+  CHECK(pkg.meta.SerializeToArray(meta_buf, meta_size))
+      << "failed to serialize " << pkg.meta.ShortDebugString();
+
+  int tag = ZMQ_SNDMORE;
+  if (n == 0) tag = 0;
+  zmq_msg_t meta_pkg;
+  zmq_msg_init_data(&meta_pkg, meta_buf, meta_size, FreeData, NULL);
+
+  while (true) {
+    if (zmq_msg_send(&meta_pkg, socket, tag) == meta_size) break;
+    if (errno == EINTR) continue;
+    LOG(WARNING) << "failed to send message to node [" << id
+                 << "] errno: " << errno << " " << zmq_strerror(errno);
+    return -1;
+  }
+  size_t send_bytes = meta_size;
+
+  // send data
+  for (int i = 0; i < n; ++i) {
+    SArray<char>* data =
+        (has_key && i == 0) ?
+        (new SArray<char>(pkg.key)) :
+        (new SArray<char>(pkg.value[i-has_key]));
+    zmq_msg_t data_pkg;
+    int data_size = data->size();
+    zmq_msg_init_data(&data_pkg, data->data(), data->size(), FreeData, data);
+    if (i == n - 1) tag = 0;
+    while (true) {
+      if (zmq_msg_send(&data_pkg, socket, tag) == data_size) break;
+      if (errno == EINTR) continue;
+      LOG(WARNING) << "failed to send message to node [" << id
+                   << "] errno: " << errno << " " << zmq_strerror(errno)
+                   << ". " << i << "/" << n << ": " << pkg.meta.ShortDebugString();
+      return -1;
+    }
+    send_bytes += data_size;
+  }
+
+  return send_bytes;
+}
+
+size_t Van::Recv(Package* pkg) {
+  pkg->value.clear();
+  size_t recv_bytes = 0;
+  for (int i = 0; ; ++i) {
+    zmq_msg_t* zmsg = new zmq_msg_t;
+    CHECK(zmq_msg_init(zmsg) == 0) << zmq_strerror(errno);
+    while (true) {
+      if (zmq_msg_recv(zmsg, receiver_, 0) != -1) break;
+      if (errno == EINTR) continue;
+      LOG(WARNING) << "failed to receive message. errno: "
+                   << errno << " " << zmq_strerror(errno);
+      return -1;
+    }
+    char* buf = CHECK_NOTNULL((char *)zmq_msg_data(zmsg));
+    size_t size = zmq_msg_size(zmsg);
+    recv_bytes += size;
+
+    if (i == 0) {
+      // identify
+      int id = 0;
+      for (size_t i = 0; i < size; ++i) {
+        CHECK_LE(buf[i], '9');
+        CHECK_GE(buf[i], '0');
+        id = id * 10 + buf[i] - '0';
+      }
+      pkg->sender = id;
+      pkg->recver = my_node_.id();
+      CHECK(zmq_msg_more(zmsg));
+      zmq_msg_close(zmsg);
+      delete zmsg;
+    } else if (i == 1) {
+      // task
+      CHECK(pkg->meta.ParseFromArray(buf, size))
+          << "failed to parse string from " << pkg->sender
+          << ". this is " << my_node_.id() << " " << size;
+      zmq_msg_close(zmsg);
+      if (!zmq_msg_more(zmsg)) break;
+      delete zmsg;
+    } else {
+      // zero-copy
+      SArray<char> data;
+      data.reset(buf, size, [zmsg](char*) {
+          zmq_msg_close(zmsg);
+          delete zmsg;
+        });
+
+      if (i == 2 && pkg->meta.with_key()) {
+        pkg->key = data;
+      } else {
+        pkg->value.push_back(data);
+      }
+      if (!zmq_msg_more(zmsg)) { break; }
+    }
+  }
+  return recv_bytes;
+}
+
+void Van::GetIP(const std::string& interface, std::string* ip) {
+  struct ifaddrs * ifAddrStruct = NULL;
+  struct ifaddrs * ifa = NULL;
+  void * tmpAddrPtr = NULL;
+
+  getifaddrs(&ifAddrStruct);
+  for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next) {
+    if (ifa->ifa_addr == NULL) continue;
+    if (ifa->ifa_addr->sa_family==AF_INET) {
+      // is a valid IP4 Address
+      tmpAddrPtr=&((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+      char addressBuffer[INET_ADDRSTRLEN];
+      inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
+      if (strncmp(ifa->ifa_name,
+                  interface.c_str(),
+                  interface.size()) == 0) {
+        *ip = addressBuffer;
+        break;
+      }
+    }
+  }
+  if (ifAddrStruct != NULL) freeifaddrs(ifAddrStruct);
+}
+
+void Van::GetAvailableInterfaceAndIP(
+    std::string* interface, std::string* ip) {
+  struct ifaddrs * ifAddrStruct = nullptr;
+  struct ifaddrs * ifa = nullptr;
+
+  interface->clear();
+  ip->clear();
+  getifaddrs(&ifAddrStruct);
+  for (ifa = ifAddrStruct; ifa != nullptr; ifa = ifa->ifa_next) {
+    if (nullptr == ifa->ifa_addr) continue;
+
+    if (AF_INET == ifa->ifa_addr->sa_family &&
+        0 == (ifa->ifa_flags & IFF_LOOPBACK)) {
+
+      char address_buffer[INET_ADDRSTRLEN];
+      void* sin_addr_ptr = &((struct sockaddr_in*)ifa->ifa_addr)->sin_addr;
+      inet_ntop(AF_INET, sin_addr_ptr, address_buffer, INET_ADDRSTRLEN);
+
+      *ip = address_buffer;
+      *interface = ifa->ifa_name;
+
+      break;
+    }
+  }
+  if (nullptr != ifAddrStruct) freeifaddrs(ifAddrStruct);
+  return;
+}
+
+unsigned short Van::GetAvailablePort() {
+  struct sockaddr_in addr;
+  addr.sin_port = htons(0); // have system pick up a random port available for me
+  addr.sin_family = AF_INET; // IPV4
+  addr.sin_addr.s_addr = htonl(INADDR_ANY); // set our addr to any interface
+
+  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (0 != bind(sock, (struct sockaddr*)&addr, sizeof(struct sockaddr_in))) {
+    perror("bind():");
+    return 0;
+  }
+
+  socklen_t addr_len = sizeof(struct sockaddr_in);
+  if (0 != getsockname(sock, (struct sockaddr*)&addr, &addr_len)) {
+    perror("getsockname():");
+    return 0;
+  }
+
+  unsigned short ret_port = ntohs(addr.sin_port);
+  close(sock);
+  return ret_port;
+}
+
+
+}  // namespace ps
