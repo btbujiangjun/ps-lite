@@ -4,28 +4,41 @@
 
 namespace ps {
 
-void Postoffice::Start() {
+void Postoffice::Start(const char* argv0) {
+  // init glog
+  if (argv0) {
+    google::InitGoogleLogging(argv0);
+  } else {
+    char name[] = "ps-lite";
+    google::InitGoogleLogging(name);
+  }
+
   // init node info.
   for (int i = 0; i < NumWorkers(); ++i) {
     int id = WorkerRankToID(i);
-    for (int g : {id, kWorkerGroup, kWorkerGroup & kServerGroup,
-            kWorkerGroup & kScheduler,
-            kWorkerGroup & kServerGroup & kScheduler}) {
+    for (int g : {id, kWorkerGroup, kWorkerGroup + kServerGroup,
+            kWorkerGroup + kScheduler,
+            kWorkerGroup + kServerGroup + kScheduler}) {
       node_ids_[g].push_back(id);
     }
   }
 
   for (int i = 0; i < NumServers(); ++i) {
     int id = ServerRankToID(i);
-    for (int g : {id, kServerGroup, kWorkerGroup & kServerGroup,
-            kServerGroup & kScheduler,
-            kWorkerGroup & kServerGroup & kScheduler}) {
+    for (int g : {id, kServerGroup, kWorkerGroup + kServerGroup,
+            kServerGroup + kScheduler,
+            kWorkerGroup + kServerGroup + kScheduler}) {
       node_ids_[g].push_back(id);
     }
   }
 
+  node_ids_[kScheduler].push_back(kScheduler);
+
+  // start van
   van_->Start();
-  Barrier(kWorkerGroup & kServerGroup & kScheduler);
+
+  // do a barrier here
+  Barrier(kWorkerGroup + kServerGroup + kScheduler);
 }
 
 void Postoffice::Finalize() {
@@ -94,29 +107,10 @@ void Postoffice::Barrier(int node_group) {
 void Postoffice::Manage(const Message& recv) {
   CHECK(recv.meta.has_control());
   const auto& ctrl = recv.meta.control();
-  if (ctrl.cmd() == Control::BARRIER) {
-    if (recv.meta.request()) {
-      if (barrier_count_.empty()) {
-        barrier_count_.resize(8);
-      }
-      CHECK(ctrl.has_barrier_group());
-      int group = ctrl.barrier_group();
-      ++ barrier_count_[group];
-      if (barrier_count_[group] == (int)GetNodeIDs(group).size()) {
-        Message res;
-        res.meta.set_request(false);
-        res.meta.mutable_control()->set_cmd(Control::BARRIER);
-        for (int r : GetNodeIDs(group)) {
-          res.recver = r;
-          CHECK_GT(van_->Send(res), 0);
-        }
-        barrier_count_[group] = 0;
-      }
-    } else {
-      barrier_mu_.lock();
-      barrier_done_ = true;
-      barrier_mu_.unlock();
-    }
+  if (ctrl.cmd() == Control::BARRIER && !recv.meta.request()) {
+    barrier_mu_.lock();
+    barrier_done_ = true;
+    barrier_mu_.unlock();
   }
 }
 }  // namespace ps

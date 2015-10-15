@@ -46,4 +46,24 @@ struct KVPairs {
 
 };
 
+
+  // Message(const Message& msg) : Message() {
+  //   if (msg.head != Message::kEmpty) {
+  //     meta.set_head(msg.head);
+  //   }
+  //   if (msg.body.size()) {
+  //     meta.set_body(msg.body);
+  //   }
+  //   if (msg.timestamp != Message::kEmpty) {
+  //     meta.set_timestamp(msg.timestamp);
+  //   }
+  //   for (auto t : msg.value_type) {
+  //     meta.add_value_type(t);
+  //   }
+  //   if (msg.key.size()) {
+  //     meta.set_with_key(true);
+  //     key = msg.key;
+  //   }
+  //   value = msg.value;
+  // }
 }  // namespace ps

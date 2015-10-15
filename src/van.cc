@@ -133,7 +133,9 @@ void Van::Start() {
   } else {
     auto role = MyNode::IsWorker() ? Node::WORKER : (
         MyNode::IsServer() ? Node::SERVER : Node::SCHEDULER);
-    std::string interface(getenv("DMLC_INTERFACE"));
+    std::string interface;
+    const char*  itf = getenv("DMLC_INTERFACE");
+    if (itf) interface = std::string(itf);
     std::string ip;
     if (interface.size()) {
       GetIP(interface, &ip);
@@ -143,7 +145,7 @@ void Van::Start() {
     int port = GetAvailablePort();
     CHECK(!ip.empty()) << "failed to get ip";
     CHECK(!interface.empty()) << "failed to get the interface";
-    CHECK(!port) << "failed to get a port";
+    CHECK(port) << "failed to get a port";
     my_node_.set_role(role);
     my_node_.set_hostname(ip);
     my_node_.set_port(port);
@@ -195,7 +197,7 @@ void Van::Start() {
     Send_(msg);
   }
   // wait until ready
-  if (!ready_) usleep(500);
+  while(!ready_) usleep(500);
 }
 
 void Van::Stop() {
@@ -388,7 +390,7 @@ void Van::Receiving() {
   MetaMessage nodes;
 
   while (true) {
-    Message msg; CHECK_GE(Recv(&msg), (size_t)0);
+    Message msg; CHECK_GE(Recv(&msg), 0);
     if (msg.meta.has_control()) {
       // do some management
       const auto& ctrl = msg.meta.control();
@@ -435,14 +437,34 @@ void Van::Receiving() {
             nodes.mutable_control()->set_cmd(Control::ADD_NODE);
             Message back; back.meta = nodes;
             for (int r : Postoffice::Get()->GetNodeIDs(
-                     kWorkerGroup & kServerGroup)) {
+                     kWorkerGroup + kServerGroup)) {
               back.recver = r; Send_(back);
             }
           }
           ready_ = true;
         }
-      } else {
-        Postoffice::Get()->Manage(msg);
+      } else if (ctrl.cmd() == Control::ADD_NODE) {
+        if (msg.meta.request()) {
+          if (barrier_count_.empty()) {
+            barrier_count_.resize(8);
+          }
+          CHECK(ctrl.has_barrier_group());
+          int group = ctrl.barrier_group();
+          ++ barrier_count_[group];
+          if (barrier_count_[group] ==
+              (int)Postoffice::Get()->GetNodeIDs(group).size()) {
+            Message res;
+            res.meta.set_request(false);
+            res.meta.mutable_control()->set_cmd(Control::BARRIER);
+            for (int r : Postoffice::Get()->GetNodeIDs(group)) {
+              res.recver = r;
+              CHECK_GT(Send_(res), 0);
+            }
+            barrier_count_[group] = 0;
+          }
+        } else {
+          Postoffice::Get()->Manage(msg);
+        }
       }
     } else {
       CHECK_EQ(msg.sender, Message::kInvalidNode);

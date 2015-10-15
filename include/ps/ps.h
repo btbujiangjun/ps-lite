@@ -14,8 +14,8 @@ namespace ps {
  * All nodes should call this function before using any other functions provided
  * in ps. This function will block until every nodes are started.
  */
-void Start() {
-  Postoffice::Get()->Start();
+void Start(const char* argv0 = nullptr) {
+  Postoffice::Get()->Start(argv0);
 }
 
 

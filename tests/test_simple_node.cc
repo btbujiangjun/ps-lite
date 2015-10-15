@@ -16,12 +16,13 @@ int main(int argc, char *argv[]) {
   Start();
   SimpleApp app(0, Handle);
 
-int n = 100;
-if (MyNode::IsScheduler()) {
+  int n = 100;
+  if (MyNode::IsScheduler()) {
+    LOG(ERROR) << "xxx";
     std::vector<int> ts;
     for (int i = 0; i < n; ++i) {
       ts.push_back(app.Request(
-          1, "test", kScheduler & kServerGroup & kWorkerGroup));
+          1, "test", kScheduler + kServerGroup + kWorkerGroup));
     }
 
     for (int t : ts) {

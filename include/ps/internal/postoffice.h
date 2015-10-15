@@ -17,7 +17,7 @@ class Postoffice {
 
   Van* van() { return van_; }
 
-  void Start();
+  void Start(const char* argv0);
 
   void Finalize();
 
@@ -91,6 +91,5 @@ class Postoffice {
   std::mutex barrier_mu_;
   std::condition_variable barrier_cond_;
 
-  std::vector<int> barrier_count_;
 };
 }  // namespace ps

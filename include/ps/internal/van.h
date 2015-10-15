@@ -136,6 +136,8 @@ int num_workers_ = 0;
    * the thread for receiving messages
    */
 
+  std::vector<int> barrier_count_;
+
   std::unique_ptr<std::thread> receiver_thread_;
   DISALLOW_COPY_AND_ASSIGN(Van);
 };
