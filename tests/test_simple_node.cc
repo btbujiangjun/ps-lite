@@ -1,4 +1,5 @@
-#include "ps.h"
+#include "ps/ps.h"
+using namespace ps;
 
 int num = 0;
 
@@ -12,11 +13,11 @@ void Handle(const SimpleApp::RecvData& data, SimpleApp* app) {
 }
 
 int main(int argc, char *argv[]) {
-  ps::Start();
-  ps::SimpleApp app(0, Handle);
+  Start();
+  SimpleApp app(0, Handle);
 
-  int n = 100;
-  if (node.IsScheduler()) {
+int n = 100;
+if (MyNode::IsScheduler()) {
     std::vector<int> ts;
     for (int i = 0; i < n; ++i) {
       ts.push_back(app.Request(
@@ -27,7 +28,7 @@ int main(int argc, char *argv[]) {
       app.Wait(t);
     }
   }
-  ps::Finalize();
+  Finalize();
 
   CHECK_EQ(num, 100);
   return 0;

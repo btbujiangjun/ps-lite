@@ -26,10 +26,12 @@ CFLAGS = -std=c++11 -msse2 -fPIC -O3 -ggdb -Wall -finline-functions $(INCPATH) $
 PS_LIB = build/libps.a
 # PS_MAIN = build/libps_main.a
 
+-include tests/test.mk
+
 all: deps ps test #guide
 
 clean:
-	rm -rf build
+	rm -rf build $(TEST) tests/*.d
 	find src -name "*.pb.[ch]*" -delete
 
 ps: $(PS_LIB) $(PS_MAIN)
@@ -64,8 +66,4 @@ include make/deps.mk
 deps: gflags glog protobuf zmq lz4 cityhash
 
 # test
-
--include tests/test.mk
 test: $(TEST)
-	echo $(TEST)
-	echo $(TEST_SRC)

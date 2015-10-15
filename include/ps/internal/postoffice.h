@@ -3,6 +3,8 @@
 namespace ps {
 
 class Customer;
+class Van;
+class Manager;
 
 class Postoffice {
  public:
@@ -12,6 +14,10 @@ class Postoffice {
   static Postoffice* Get() {
     static Postoffice e; return &e;
   }
+
+  Van* van() { return van_; }
+
+  Manager* manager() { return manager_; }
 
   /**
    * \brief add an customer to the system. threadsafe
@@ -39,7 +45,10 @@ class Postoffice {
   ~Postoffice() {
 
   }
-  DISALLOW_COPY_AND_ASSIGN(Postoffice);
 
+  Van* van_;
+  Manager* manager_;
+
+  DISALLOW_COPY_AND_ASSIGN(Postoffice);
 };
 }  // namespace ps

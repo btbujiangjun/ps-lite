@@ -2,51 +2,6 @@
 #include <string>
 namespace ps {
 
-/*!
- * \brief Get environment variable as int with default.
- * \param key the name of environment variable.
- * \param default_val the default value of environment vriable.
- * \return The value received
- */
-template<typename V>
-inline V GetEnv(const char *key, V default_val) {
-  const char *val = getenv(key);
-  if (val == nullptr) {
-    return default_val;
-  } else {
-    return atoi(val);
-  }
-}
-
-/**
- * \brief node ID for the scheduler
- */
-const static int kScheduler = 0;
-
-/**
- * \brief the server node group ID
- */
-const static int kServerGroup = 1;
-
-/**
- * \brief the worker node group ID
- */
-const static int kWorkerGroup = 2;
-
-/**
- * \brief Returns the number of worker nodes
- */
-inline int NumWorkers() {
-  return GetEnv("DMLC_NUM_WORKER", 1);
-}
-
-/**
- * \brief Returns the number of server nodes
- */
-inline int NumServers() {
-  return GetEnv("DMLC_NUM_SERVER", 0);
-}
-
 /**
  * \brief query info about my node
  */

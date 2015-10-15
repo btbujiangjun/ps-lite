@@ -17,7 +17,7 @@ class App {
   }
 
   inline void Response(int node_id, int timestamp,
-                       const Message& msg = Message()) {
+                       const Message& msg) {
 
   }
 

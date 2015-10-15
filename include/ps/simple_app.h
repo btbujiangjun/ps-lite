@@ -1,35 +1,13 @@
 #pragma once
-
+#include "ps/internal/customer.h"
 namespace ps {
-
 
 /**
  * \brief a simple app communicating <int, string> pair with others.
  */
 
 class SimpleApp {
-
  public:
-  explicit SimpleApp(int app_id);
-  virtual ~SimpleApp() { }
-
-  /**
-   * \brief send a request to a remote node
-   *
-   * @param req_head request head
-   * @param req_body request body
-   * @param node_id remote node id
-   *
-   * @return the timestamp of this request
-   */
-  int Request(int req_head, const std::string& req_body, int node_id);
-
-  /**
-   * \brief wait until a request is finished
-   *
-   * @param timestamp
-   */
-  void Wait(int timestamp);
 
   /**
    * \brief the received data, either a request or a response
@@ -49,27 +27,91 @@ class SimpleApp {
     int sender;
 
     int timestamp;
+  };
 
+  /**
+   * \brief handle a request or a response from a worker node
+   *
+   * @param push true if this is a push request, false for pull
+   * @param recved the received request/response
+   * @param node this pointer
+   */
+  using Handle = std::function<void(const RecvData& recved, SimpleApp* node)>;
+  explicit SimpleApp(int app_id, const Handle& handle) :
+      handle_(handle), Customer(app_id, RecvHandle) {
+    CHECK(handle_);
   }
+  virtual ~SimpleApp() { }
+
+  /**
+   * \brief send a request to a remote node
+   *
+   * @param req_head request head
+   * @param req_body request body
+   * @param node_id remote node id
+   *
+   * @return the timestamp of this request
+   */
+  int Request(int req_head, const std::string& req_body, int recv_id) {
+    // setup message
+    Message msg;
+    msg.meta.set_head(req_head);
+    if (body.size()) msg.meta.set_body(req_body);
+    int ts = obj_.NewRequest(recv_id);
+    msg.meta.set_timestamp(ts);
+    msg.meta.set_request(true);
+    msg.meta.set_customer_id(obj_.id());
+
+    // send
+    for (int r : Postoffice::Get()->manager()->GetNodeIDs(recv_id)) {
+      msg.recver = r;
+      Postoffice::Get()->van()->Send(msg)
+    }
+    return ts;
+  }
+
+  /**
+   * \brief wait until a request is finished
+   *
+   * @param timestamp
+   */
+  void Wait(int timestamp) {
+    obj_.WaitRequest(timestamp);
+  }
+
 
   /**
    * \brief send back a response for a request
    *
    */
 
-  int Response(const RecvData& req, const std::string& res_body = "");
+  void Response(const RecvData& req, const std::string& res_body = "") {
+    // setup message
+    Message msg;
+    msg.meta.set_head(req.head);
+    if (res_body.size()) msg.meta.set_body(res_body);
+    msg.meta.set_timestamp(req.timestamp);
+    msg.meta.set_request(false);
+    msg.meta.set_customer_id(obj_.id());
+    msg.recver = req.sender;
 
+    // send
+    Postoffice::Get()->van()->Send(msg)
+  }
 
-  /**
-   * \brief handle a request or a response from a worker node
-   *
-   *
-   * @param push true if this is a push request, false for pull
-   * @param recved the received request/response
-   * @param node this pointer
-   */
-  using Handle = std::function<void(const RecvData& recved, SimpleApp* node)>
+ private:
+  void RecvHandle(const Message& msg) {
+    RecvData recv;
+    recv.head = msg.meta.head();
+    recv.body = msg.meta.body();
+    recv.request = msg.meta.request();
+    recv.timestamp = msg.meta.timestamp();
+    recv.sender = msg.sender;
+    handle_(recv);
+  }
 
-
+  Handle handle_;
+  Customer obj_;
 };
+
 }  // namespace ps
