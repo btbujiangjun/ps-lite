@@ -13,17 +13,6 @@
 namespace ps {
 
 /**
- * \brief be smart on freeing recved data
- */
-void FreeData(void *data, void *hint) {
-  if (hint == NULL) {
-    delete [] (char*)data;
-  } else {
-    delete (SArray<char>*)hint;
-  }
-}
-
-/**
  * \brief return the IP address for given interface eth0, eth1, ...
  */
 void GetIP(const std::string& interface, std::string* ip) {
@@ -254,6 +243,18 @@ void Van::Connect(const Node& node) {
   senders_[id] = sender;
 }
 
+/**
+ * \brief be smart on freeing recved data
+ */
+void FreeData(void *data, void *hint) {
+  if (hint == NULL) {
+    delete [] (char*)data;
+  } else {
+    delete (SArray<char>*)hint;
+  }
+}
+
+
 int Van::Send_(const Message& msg) {
   std::lock_guard<std::mutex> lk(mu_);
 
@@ -443,16 +444,17 @@ void Van::Receiving() {
           }
           ready_ = true;
         }
-      } else if (ctrl.cmd() == Control::ADD_NODE) {
+      } else if (ctrl.cmd() == Control::BARRIER) {
         if (msg.meta.request()) {
           if (barrier_count_.empty()) {
-            barrier_count_.resize(8);
+            barrier_count_.resize(8,0);
           }
           CHECK(ctrl.has_barrier_group());
           int group = ctrl.barrier_group();
           ++ barrier_count_[group];
           if (barrier_count_[group] ==
               (int)Postoffice::Get()->GetNodeIDs(group).size()) {
+            barrier_count_[group] = 0;
             Message res;
             res.meta.set_request(false);
             res.meta.mutable_control()->set_cmd(Control::BARRIER);
@@ -460,7 +462,6 @@ void Van::Receiving() {
               res.recver = r;
               CHECK_GT(Send_(res), 0);
             }
-            barrier_count_[group] = 0;
           }
         } else {
           Postoffice::Get()->Manage(msg);

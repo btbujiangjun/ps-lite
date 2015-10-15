@@ -32,7 +32,10 @@ void Postoffice::Start(const char* argv0) {
     }
   }
 
-  node_ids_[kScheduler].push_back(kScheduler);
+  for (int g : {kScheduler, kScheduler + kServerGroup + kWorkerGroup,
+          kScheduler + kWorkerGroup, kScheduler + kServerGroup}) {
+    node_ids_[g].push_back(kScheduler);
+  }
 
   // start van
   van_->Start();
@@ -110,6 +113,7 @@ void Postoffice::Manage(const Message& recv) {
   if (ctrl.cmd() == Control::BARRIER && !recv.meta.request()) {
     barrier_mu_.lock();
     barrier_done_ = true;
+    barrier_cond_.notify_all();
     barrier_mu_.unlock();
   }
 }
