@@ -1,16 +1,16 @@
 #pragma once
 
+namespace ps {
+
 /**
  * \brief the base class of an application in ps
  */
 class App {
  public:
-  explicit App(int id) {
+  explicit App(int app_id) {
 
   }
   virtual ~App() { }
-
-  int id() { return id_; }
 
   inline int Request(int node_id, const Message& msg) {
 
@@ -74,3 +74,5 @@ class App {
   int id_;
   DISALLOW_COPY_AND_ASSIGN(App);
 };
+
+}  // namespace ps

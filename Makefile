@@ -26,7 +26,7 @@ CFLAGS = -std=c++11 -msse2 -fPIC -O3 -ggdb -Wall -finline-functions $(INCPATH) $
 PS_LIB = build/libps.a
 # PS_MAIN = build/libps_main.a
 
-all: deps ps #guide
+all: deps ps test #guide
 
 clean:
 	rm -rf build
@@ -45,6 +45,7 @@ build/libps.a: $(patsubst %.proto, %.pb.h, $(ps_protos)) $(ps_objs)
 # build/libps_main.a: build/ps_main.o
 # 	ar crv $@ $?
 
+
 build/%.o: src/%.cc
 	@mkdir -p $(@D)
 	$(CXX) $(INCPATH) -std=c++0x -MM -MT build/$*.o $< >build/$*.d
@@ -55,10 +56,16 @@ build/%.o: src/%.cc
 
 -include build/*/*.d
 -include build/*/*/*.d
-# -include test/ps_test.mk
 # -include guide/ps_guide.mk
 
 # deps
 include make/deps.mk
 
 deps: gflags glog protobuf zmq lz4 cityhash
+
+# test
+
+-include tests/test.mk
+test: $(TEST)
+	echo $(TEST)
+	echo $(TEST_SRC)

@@ -1,5 +1,6 @@
 #pragma once
 #include "glog/logging.h"
+
 namespace ps {
 
 #ifdef _MSC_VER
@@ -15,10 +16,12 @@ typedef unsigned __int64 uint64_t;
 #include <inttypes.h>
 #endif
 
-}  // namespace ps
-
 #ifndef DISALLOW_COPY_AND_ASSIGN
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
   TypeName(const TypeName&);               \
   void operator=(const TypeName&)
 #endif
+
+
+
+}  // namespace ps

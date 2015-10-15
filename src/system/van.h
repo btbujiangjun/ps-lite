@@ -3,22 +3,68 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <memory>
+#include <atomic>
 #include "ps/base.h"
-#include "ps/sarray.h"
-#include "system/package.h"
+#include "system/message.h"
 #include "proto/node.pb.h"
 
 namespace ps {
 
-
-
 /**
- * @brief Van sends and receives packages
+ * \brief Van sends messages to remote nodes
  */
 class Van {
  public:
-  Van();
-  ~Van();
+  /** \brief constructer, do nothing. use \ref Start for real things */
+  Van() { }
+
+  /**\brief deconstructer, do nothing. use \ref Stop for real staff */
+  ~Van() { }
+
+  /**
+   * \brief start van
+   *
+   * must call it before calling Send
+   * initalize all connections to other nodes
+   * start the receiving and monitoring threads.
+   *
+   * the former keeps receiving messages. if it is a system control message,
+   * give it to postoffice::manager, otherwise, give it to the accoding app
+   *
+   * for the latter, if this is a scheduler node, then monitors the liveness
+   * other nodes. otherwise, monitor the liveness of the scheduler
+   */
+  void Start();
+
+  /**
+   * \brief send a message, thread-safe
+   * \return the number of bytes sent. -1 if failed
+   */
+  size_t Send(const Message& msg) {
+    CHECK(ready_) << "call Start() first";
+    return Send_(msg);
+  }
+
+  /**
+   * \brief stop van
+   *
+   * stop both receiving and monitoring threads
+   */
+  void Stop();
+
+ private:
+
+  /**
+   * \return interal version without ready check
+   */
+  size_t Send_(const Message& msg);
+
+  /**
+   * return the node id given the received identity
+   * \return -1 if not find
+   */
+  int GetNodeID(const char* buf, size_t size);
 
   /**
    * \brief connect to a node
@@ -26,53 +72,20 @@ class Van {
   void Connect(const Node& node);
 
   /**
-   * \brief send packge,
-   * \return the number of bytes sent. -1 if failed
-   */
-  size_t Send(const Package& pkg);
-
-  /**
    * \brief receive a packge
    * \return the number of bytes received. -1 if failed
    */
-  size_t Recv(Package* pkg);
+  size_t Recv(Message* msg);
 
- private:
-
-  /**
-   * return the IP address for given interface eth0, eth1, ...
-   */
-  void GetIP(const std::string& interface, std::string* ip);
 
   /**
-   * \brief return the IP address and Interface the first interface which is not
-   * loopback
-   *
-   * only support IPv4
+   * thread function for receving
    */
-  void GetAvailableInterfaceAndIP(std::string* interface,
-                                  std::string* ip);
+  void Receiving();
 
   /**
-   * \brief return an available port on local machine
-   *
-   * only support IPv4
-   * \return 0 on failure
+   * thread function for monioring
    */
-  unsigned short GetAvailablePort();
-
-  /**
-   * \brief be smart on freeing recved data
-   */
-  static void FreeData(void *data, void *hint) {
-    if (hint == NULL) {
-      delete [] (char*)data;
-    } else {
-      delete (SArray<char>*)hint;
-    }
-  }
-  // for scheduler: monitor the liveness of all other nodes
-  // for other nodes: monitor the liveness of the scheduler
   void Monitoring();
 
   void *context_ = nullptr;
@@ -80,17 +93,42 @@ class Van {
 
   Node scheduler_;
   Node my_node_;
+  bool is_scheduler_;
 
   /**
-   * \brief the socket for sending data to remote nodes
+   * whether it is ready for sending
+   */
+  std::atomic<bool> ready_{false};
+
+  /**
+   * in exiting if true
+   */
+  std::atomic<bool> exit_{true};
+
+  std::mutex mu_;
+
+  size_t send_bytes_;
+  size_t recv_bytes_;
+  /**
+   * \brief map net_id to node_id, only used by the schduler
+   */
+  std::unordered_map<std::string, int> node_ids_;
+
+  /**
+   * \brief node_id to the socket for sending data to this node
    */
   std::unordered_map<int, void *> senders_;
 
-  // for connection monitor
-  std::unordered_map<int, int> fd_to_nodeid_;
-  std::mutex fd_to_nodeid_mu_;
-  std::thread* monitor_thread_;
+  /**
+   * the thread for monitoering node liveness
+   */
+  std::unique_ptr<std::thread> monitor_thread_;
 
+  /**
+   * the thread for receiving messages
+   */
+
+  std::unique_ptr<std::thread> receiver_thread_;
   DISALLOW_COPY_AND_ASSIGN(Van);
 };
 }  // namespace ps

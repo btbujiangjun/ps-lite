@@ -1,48 +1,5 @@
-#include "./app.h"
+// #include "./app.h"
 namespace ps {
-
-/**
- * \brief synchronization options for a worker request (push or pull)
- */
-struct SyncOpts {
-  /**
-   * \brief The callback for this request is finished
-   *
-   * The callback will be called after this request is actually finished. In
-   * other words, all ack messages have been received for a push or all values
-   * have been pulled back for a pull.  Semantically, it is almost the same
-   * between
-   *
-   * \code
-   *    Wait(Push(keys, vals)); func();
-   * \endcode
-   * and
-   * \code
-   *   SyncOpts opt; opt.callback = func;
-   *   Wait(Push(keys, vals, opt));
-   * \endcode
-   *
-   * The subtle difference is that, in the latter, \a func is executed before
-   * \ref Wait returns, and it is executed by a different thread (KVworker's
-   * data receiving thread).
-   */
-  std::function<void()> callback;
-
-  /**
-   * \brief Filters to compression data
-   * \sa ps::IFilter AddFilter
-   */
-  // std::vector<Filter> filters;
-
-  /**
-   * \brief The command that will be passed to the server handle.
-   */
-  int cmd = 0;
-
-  int timestamp = -1;
-
-
-};
 
 /**
  * \brief Communicate server nodes with key-value pairs
@@ -54,7 +11,7 @@ struct SyncOpts {
  * int32_t and float
  */
 template<typename Val>
-class KVWorker : public App {
+class KVWorker {
  public:
   /**
    * \brief Creates with an unique identity
@@ -65,12 +22,17 @@ class KVWorker : public App {
    * identity. If such object does not exist on the receiver node, the system
    * will produce a fatal message.
    *
-   * \param id the unique identity, negative IDs are preserved by system.
+   * \param app_id the unique identity, negative IDs are preserved by system.
    */
-  explicit KVWorker(int id = NextID()) {}
+  explicit KVWorker(int app_id) {}
 
   ~KVWorker() { }
 
+  /**
+   * \brief callback function
+   *
+   */
+  using Callaback = std::function<void()>;
 
   /**
    * \brief Pushes a list of key-value pairs to all server nodes.
@@ -100,6 +62,18 @@ class KVWorker : public App {
    *   w.Push(keys, vals);
    * \endcode
    *
+   * @brief Extends \ref Push to dynamic length values
+   *
+   * This function is similar to \ref Push except that there is additional \a
+   * vals_size where `vals_size[i]` stores the value length of the \a i-th KV
+   * pair. In other words, assume `n = vals_size[0] + .. + vals_size[i-1]`,
+   * then the \a i-th KV pair is presented as
+   *
+   * \verbatim {keys[i], (vals[n], ..., vals[vals_size[i]+n-1])} \endverbatim
+   *
+   * @param keys a list of keys, which must be sorted
+   * @param vals the according values
+   * @param val_lens val_lens[i] stores the value length of the \a i-th KV pair
    * @param keys a list of keys, which must be sorted
    * @param vals the according values
    * @param opts push options
@@ -111,7 +85,8 @@ class KVWorker : public App {
    */
   int Push(const std::vector<Key>& keys,
            const std::vector<Val>& vals,
-           const SyncOpts& opts = SyncOpts()) {
+           const std::vector<int>& val_lens = {},
+           const Callback& cb = nullptr) {
   }
 
 
@@ -135,24 +110,6 @@ class KVWorker : public App {
    *   ps.Pull(keys, &vals);
    * \endcode
    *
-   * @param keys a list of keys, which must be sorted
-   * @param vals the buffer for the pulled values. It can be empty.
-   * @param opts pull options
-   * @return the timestamp of this request
-   *
-   * \note Both keys and values will be copied into a system buffer, the
-   * zero-copy version \ref ZPull might be more efficient
-   * \note Use \ref VPull to pull dynamic length values
-   */
-  int Pull(const std::vector<Key>& keys,
-           std::vector<Val>* vals,
-           const SyncOpts& opts = SyncOpts()) {
-    // copy the data, then use the zero-copy pull
-    return ZPull(std::make_shared<std::vector<Key>>(keys), vals, opts);
-  }
-
-
-  /**
    * @brief Extends \ref Push to dynamic length values
    *
    * This function is similar to \ref Push except that there is additional \a
@@ -164,48 +121,54 @@ class KVWorker : public App {
    *
    * @param keys a list of keys, which must be sorted
    * @param vals the according values
-   * @param vals_size vals_size[i] stores the value length of the \a i-th KV pair
-   * @param opts push options
-   * @return the timestamp of this request
-   *
-   * \note Both keys and values will be copied into a system buffer, the
-   * zero-copy version \ref ZVPush might be more efficient
-   */
-  int VPush(const std::vector<Key>& keys,
-            const std::vector<Val>& vals,
-            const std::vector<int>& vals_size,
-            const SyncOpts& opts = SyncOpts()) {
-    // copy data, then call the zero-copy push
-    return ZVPush(std::make_shared<std::vector<Key>>(keys),
-                  std::make_shared<std::vector<Val>>(vals),
-                  std::make_shared<std::vector<int>>(vals_size), opts);
-  }
-
-  /**
-   * @brief Extends \ref Pull to dynamic length values
-   *
-   * This function is similar to \ref Pull except that an additional \a
-   * vals_size is pulled, where `vals_size[i]` stores the value length of the
-   * \a i-th KV pair
+   * @param val_lens val_lens[i] stores the value length of the \a i-th KV pair
    *
    * @param keys a list of keys, which must be sorted
    * @param vals the buffer for the pulled values. It can be empty.
-   * @param vals_size the buffer for the pulled value lengths. It can be empty.
    * @param opts pull options
    * @return the timestamp of this request
    *
    * \note Both keys and values will be copied into a system buffer, the
-   * zero-copy version \ref ZVPull might be more efficient
+   * zero-copy version \ref ZPull might be more efficient
+   * \note Use \ref VPull to pull dynamic length values
    */
-  int VPull(const std::vector<Key>& keys,
-            std::vector<Val>* vals,
-            std::vector<int>* vals_size,
-            const SyncOpts& opts = SyncOpts()) {
-    // copy data, then call the zero-copy pull
-    return ZVPull(std::make_shared<std::vector<Key>>(keys),
-                  CHECK_NOTNULL(vals), CHECK_NOTNULL(vals_size), opts);
+  int Pull(const std::vector<Key>& keys,
+           std::vector<Val>* vals,
+           std::vector<int>* val_lens = nullptr,
+           const Callback& cb = nullptr) {
   }
 
 
+  void Wait(int timestamp) {
+  }
+};
+
+/**
+ *
+ *
+ */
+template <typename Val>
+class KVServer {
+ public:
+  KVServer(int app_id, const Handle& handle) { }
+
+  void Response(int node_id, int timestamp,
+                const KVPairs ret = KVPairs()) {
+  }
+
+  /**
+   * \brief handle a push/pull request from a worker node
+   *
+   *
+   * @param push true if this is a push request, false for pull
+   * @param recved the received kv pairs
+   * @param server this pointer
+   */
+  using Handle = std::function<void(bool push,
+                                    const KVParis& recved,
+                                    KVServer<Val>* server)>;
+
+
+};
 
 }  // namespace ps

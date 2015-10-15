@@ -23,7 +23,9 @@
 #include <google/protobuf/message.h>
 #include <google/protobuf/repeated_field.h>
 #include <google/protobuf/extension_set.h>
+#include <google/protobuf/generated_enum_reflection.h>
 #include <google/protobuf/unknown_field_set.h>
+#include "proto/node.pb.h"
 // @@protoc_insertion_point(includes)
 
 namespace ps {
@@ -34,7 +36,26 @@ void protobuf_AssignDesc_proto_2fmeta_5fmessage_2eproto();
 void protobuf_ShutdownFile_proto_2fmeta_5fmessage_2eproto();
 
 class MetaMessage;
+class Control;
 
+enum Control_Command {
+  Control_Command_ADD_NODE = 1
+};
+bool Control_Command_IsValid(int value);
+const Control_Command Control_Command_Command_MIN = Control_Command_ADD_NODE;
+const Control_Command Control_Command_Command_MAX = Control_Command_ADD_NODE;
+const int Control_Command_Command_ARRAYSIZE = Control_Command_Command_MAX + 1;
+
+const ::google::protobuf::EnumDescriptor* Control_Command_descriptor();
+inline const ::std::string& Control_Command_Name(Control_Command value) {
+  return ::google::protobuf::internal::NameOfEnum(
+    Control_Command_descriptor(), value);
+}
+inline bool Control_Command_Parse(
+    const ::std::string& name, Control_Command* value) {
+  return ::google::protobuf::internal::ParseNamedEnum<Control_Command>(
+    Control_Command_descriptor(), name, value);
+}
 // ===================================================================
 
 class MetaMessage : public ::google::protobuf::Message {
@@ -110,12 +131,14 @@ class MetaMessage : public ::google::protobuf::Message {
   inline ::std::string* release_body();
   inline void set_allocated_body(::std::string* body);
 
-  // optional bool control = 3 [default = false];
+  // optional .ps.Control control = 3;
   inline bool has_control() const;
   inline void clear_control();
   static const int kControlFieldNumber = 3;
-  inline bool control() const;
-  inline void set_control(bool value);
+  inline const ::ps::Control& control() const;
+  inline ::ps::Control* mutable_control();
+  inline ::ps::Control* release_control();
+  inline void set_allocated_control(::ps::Control* control);
 
   // optional bool request = 4 [default = false];
   inline bool has_request() const;
@@ -124,12 +147,12 @@ class MetaMessage : public ::google::protobuf::Message {
   inline bool request() const;
   inline void set_request(bool value);
 
-  // optional int32 app_id = 5;
-  inline bool has_app_id() const;
-  inline void clear_app_id();
-  static const int kAppIdFieldNumber = 5;
-  inline ::google::protobuf::int32 app_id() const;
-  inline void set_app_id(::google::protobuf::int32 value);
+  // optional int32 customer_id = 5;
+  inline bool has_customer_id() const;
+  inline void clear_customer_id();
+  static const int kCustomerIdFieldNumber = 5;
+  inline ::google::protobuf::int32 customer_id() const;
+  inline void set_customer_id(::google::protobuf::int32 value);
 
   // optional int32 timestamp = 6;
   inline bool has_timestamp() const;
@@ -167,8 +190,8 @@ class MetaMessage : public ::google::protobuf::Message {
   inline void clear_has_control();
   inline void set_has_request();
   inline void clear_has_request();
-  inline void set_has_app_id();
-  inline void clear_has_app_id();
+  inline void set_has_customer_id();
+  inline void clear_has_customer_id();
   inline void set_has_timestamp();
   inline void clear_has_timestamp();
   inline void set_has_with_key();
@@ -177,11 +200,11 @@ class MetaMessage : public ::google::protobuf::Message {
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::std::string* body_;
+  ::ps::Control* control_;
   ::google::protobuf::int32 head_;
-  bool control_;
+  ::google::protobuf::int32 customer_id_;
   bool request_;
   bool with_key_;
-  ::google::protobuf::int32 app_id_;
   ::google::protobuf::int32 timestamp_;
   ::google::protobuf::RepeatedField< ::google::protobuf::int32 > value_type_;
   mutable int _value_type_cached_byte_size_;
@@ -195,6 +218,124 @@ class MetaMessage : public ::google::protobuf::Message {
 
   void InitAsDefaultInstance();
   static MetaMessage* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class Control : public ::google::protobuf::Message {
+ public:
+  Control();
+  virtual ~Control();
+
+  Control(const Control& from);
+
+  inline Control& operator=(const Control& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const Control& default_instance();
+
+  void Swap(Control* other);
+
+  // implements Message ----------------------------------------------
+
+  Control* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const Control& from);
+  void MergeFrom(const Control& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  typedef Control_Command Command;
+  static const Command ADD_NODE = Control_Command_ADD_NODE;
+  static inline bool Command_IsValid(int value) {
+    return Control_Command_IsValid(value);
+  }
+  static const Command Command_MIN =
+    Control_Command_Command_MIN;
+  static const Command Command_MAX =
+    Control_Command_Command_MAX;
+  static const int Command_ARRAYSIZE =
+    Control_Command_Command_ARRAYSIZE;
+  static inline const ::google::protobuf::EnumDescriptor*
+  Command_descriptor() {
+    return Control_Command_descriptor();
+  }
+  static inline const ::std::string& Command_Name(Command value) {
+    return Control_Command_Name(value);
+  }
+  static inline bool Command_Parse(const ::std::string& name,
+      Command* value) {
+    return Control_Command_Parse(name, value);
+  }
+
+  // accessors -------------------------------------------------------
+
+  // required .ps.Control.Command cmd = 1;
+  inline bool has_cmd() const;
+  inline void clear_cmd();
+  static const int kCmdFieldNumber = 1;
+  inline ::ps::Control_Command cmd() const;
+  inline void set_cmd(::ps::Control_Command value);
+
+  // repeated .ps.Node node = 2;
+  inline int node_size() const;
+  inline void clear_node();
+  static const int kNodeFieldNumber = 2;
+  inline const ::ps::Node& node(int index) const;
+  inline ::ps::Node* mutable_node(int index);
+  inline ::ps::Node* add_node();
+  inline const ::google::protobuf::RepeatedPtrField< ::ps::Node >&
+      node() const;
+  inline ::google::protobuf::RepeatedPtrField< ::ps::Node >*
+      mutable_node();
+
+  // @@protoc_insertion_point(class_scope:ps.Control)
+ private:
+  inline void set_has_cmd();
+  inline void clear_has_cmd();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::RepeatedPtrField< ::ps::Node > node_;
+  int cmd_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+
+  friend void  protobuf_AddDesc_proto_2fmeta_5fmessage_2eproto();
+  friend void protobuf_AssignDesc_proto_2fmeta_5fmessage_2eproto();
+  friend void protobuf_ShutdownFile_proto_2fmeta_5fmessage_2eproto();
+
+  void InitAsDefaultInstance();
+  static Control* default_instance_;
 };
 // ===================================================================
 
@@ -295,7 +436,7 @@ inline void MetaMessage::set_allocated_body(::std::string* body) {
   }
 }
 
-// optional bool control = 3 [default = false];
+// optional .ps.Control control = 3;
 inline bool MetaMessage::has_control() const {
   return (_has_bits_[0] & 0x00000004u) != 0;
 }
@@ -306,15 +447,31 @@ inline void MetaMessage::clear_has_control() {
   _has_bits_[0] &= ~0x00000004u;
 }
 inline void MetaMessage::clear_control() {
-  control_ = false;
+  if (control_ != NULL) control_->::ps::Control::Clear();
   clear_has_control();
 }
-inline bool MetaMessage::control() const {
+inline const ::ps::Control& MetaMessage::control() const {
+  return control_ != NULL ? *control_ : *default_instance_->control_;
+}
+inline ::ps::Control* MetaMessage::mutable_control() {
+  set_has_control();
+  if (control_ == NULL) control_ = new ::ps::Control;
   return control_;
 }
-inline void MetaMessage::set_control(bool value) {
-  set_has_control();
-  control_ = value;
+inline ::ps::Control* MetaMessage::release_control() {
+  clear_has_control();
+  ::ps::Control* temp = control_;
+  control_ = NULL;
+  return temp;
+}
+inline void MetaMessage::set_allocated_control(::ps::Control* control) {
+  delete control_;
+  control_ = control;
+  if (control) {
+    set_has_control();
+  } else {
+    clear_has_control();
+  }
 }
 
 // optional bool request = 4 [default = false];
@@ -339,26 +496,26 @@ inline void MetaMessage::set_request(bool value) {
   request_ = value;
 }
 
-// optional int32 app_id = 5;
-inline bool MetaMessage::has_app_id() const {
+// optional int32 customer_id = 5;
+inline bool MetaMessage::has_customer_id() const {
   return (_has_bits_[0] & 0x00000010u) != 0;
 }
-inline void MetaMessage::set_has_app_id() {
+inline void MetaMessage::set_has_customer_id() {
   _has_bits_[0] |= 0x00000010u;
 }
-inline void MetaMessage::clear_has_app_id() {
+inline void MetaMessage::clear_has_customer_id() {
   _has_bits_[0] &= ~0x00000010u;
 }
-inline void MetaMessage::clear_app_id() {
-  app_id_ = 0;
-  clear_has_app_id();
+inline void MetaMessage::clear_customer_id() {
+  customer_id_ = 0;
+  clear_has_customer_id();
 }
-inline ::google::protobuf::int32 MetaMessage::app_id() const {
-  return app_id_;
+inline ::google::protobuf::int32 MetaMessage::customer_id() const {
+  return customer_id_;
 }
-inline void MetaMessage::set_app_id(::google::protobuf::int32 value) {
-  set_has_app_id();
-  app_id_ = value;
+inline void MetaMessage::set_customer_id(::google::protobuf::int32 value) {
+  set_has_customer_id();
+  customer_id_ = value;
 }
 
 // optional int32 timestamp = 6;
@@ -430,6 +587,58 @@ MetaMessage::mutable_value_type() {
   return &value_type_;
 }
 
+// -------------------------------------------------------------------
+
+// Control
+
+// required .ps.Control.Command cmd = 1;
+inline bool Control::has_cmd() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void Control::set_has_cmd() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void Control::clear_has_cmd() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void Control::clear_cmd() {
+  cmd_ = 1;
+  clear_has_cmd();
+}
+inline ::ps::Control_Command Control::cmd() const {
+  return static_cast< ::ps::Control_Command >(cmd_);
+}
+inline void Control::set_cmd(::ps::Control_Command value) {
+  assert(::ps::Control_Command_IsValid(value));
+  set_has_cmd();
+  cmd_ = value;
+}
+
+// repeated .ps.Node node = 2;
+inline int Control::node_size() const {
+  return node_.size();
+}
+inline void Control::clear_node() {
+  node_.Clear();
+}
+inline const ::ps::Node& Control::node(int index) const {
+  return node_.Get(index);
+}
+inline ::ps::Node* Control::mutable_node(int index) {
+  return node_.Mutable(index);
+}
+inline ::ps::Node* Control::add_node() {
+  return node_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::ps::Node >&
+Control::node() const {
+  return node_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::ps::Node >*
+Control::mutable_node() {
+  return &node_;
+}
+
 
 // @@protoc_insertion_point(namespace_scope)
 
@@ -439,6 +648,10 @@ MetaMessage::mutable_value_type() {
 namespace google {
 namespace protobuf {
 
+template <>
+inline const EnumDescriptor* GetEnumDescriptor< ::ps::Control_Command>() {
+  return ::ps::Control_Command_descriptor();
+}
 
 }  // namespace google
 }  // namespace protobuf
