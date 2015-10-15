@@ -6,8 +6,9 @@
 #include <memory>
 #include <atomic>
 #include "ps/base.h"
-#include "system/message.h"
-#include "proto/node.pb.h"
+
+#include "ps/internal/message.h"
+#include "ps/internal/node.pb.h"
 
 namespace ps {
 

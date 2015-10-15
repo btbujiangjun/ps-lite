@@ -1,5 +1,5 @@
 #pragma once
-#include "proto/meta_message.pb.h"
+#include "ps/internal/meta_message.pb.h"
 #include "ps/kv_pairs.h"
 namespace ps {
 

@@ -32,13 +32,13 @@ all: deps ps test #guide
 
 clean:
 	rm -rf build $(TEST) tests/*.d
-	find src -name "*.pb.[ch]*" -delete
+	find include -name "*.pb.cc" -delete
 
 ps: $(PS_LIB) $(PS_MAIN)
 
 ps_srcs	= $(wildcard src/*.cc src/*/*.cc)
-ps_protos	= $(wildcard src/proto/*.proto)
-ps_objs	= $(patsubst src/%.proto, build/%.pb.o, $(ps_protos)) \
+ps_protos	= $(wildcard include/ps/internal/*.proto)
+ps_objs	= $(patsubst include/ps/internal/%.proto, build/%.pb.o, $(ps_protos)) \
 			  $(patsubst src/%.cc, build/%.o, $(ps_srcs))
 
 build/libps.a: $(patsubst %.proto, %.pb.h, $(ps_protos)) $(ps_objs)
@@ -47,17 +47,20 @@ build/libps.a: $(patsubst %.proto, %.pb.h, $(ps_protos)) $(ps_objs)
 # build/libps_main.a: build/ps_main.o
 # 	ar crv $@ $?
 
-
 build/%.o: src/%.cc
 	@mkdir -p $(@D)
 	$(CXX) $(INCPATH) -std=c++0x -MM -MT build/$*.o $< >build/$*.d
 	$(CXX) $(CFLAGS) -c $< -o $@
 
-%.pb.cc %.pb.h : %.proto
-	$(PROTOC) --cpp_out=./src --proto_path=./src $<
+build/%.o: include/ps/internal/%.cc
+	@mkdir -p build
+	$(CXX) $(CFLAGS) -c $< -o $@
 
+%.pb.cc %.pb.h : %.proto
+	$(PROTOC) --cpp_out=./include --proto_path=./include $<
+
+-include build/*.d
 -include build/*/*.d
--include build/*/*/*.d
 # -include guide/ps_guide.mk
 
 # deps

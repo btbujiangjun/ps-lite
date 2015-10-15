@@ -1,5 +1,5 @@
 package ps;
-import "proto/node.proto";
+import "ps/internal/node.proto";
 
 // mete information about a message
 message MetaMessage {

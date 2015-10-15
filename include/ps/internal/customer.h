@@ -1,5 +1,5 @@
 #pragma once
-#include <mutext>
+#include <mutex>
 #include <atomic>
 #include <condition_variable>
 #include "ps/internal/message.h"

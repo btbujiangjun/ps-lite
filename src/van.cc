@@ -1,4 +1,4 @@
-#include "system/van.h"
+#include "ps/internal/van.h"
 #include <zmq.h>
 #include <net/if.h>
 #include <arpa/inet.h>
@@ -6,8 +6,8 @@
 #include <netinet/in.h>
 #include "ps/node_info.h"
 #include "ps/sarray.h"
-#include "system/postoffice.h"
-#include "system/customer.h"
+#include "ps/internal/postoffice.h"
+#include "ps/internal/customer.h"
 
 namespace ps {
 
