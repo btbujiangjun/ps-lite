@@ -8,6 +8,7 @@
 #include "ps/sarray.h"
 #include "ps/internal/postoffice.h"
 #include "ps/internal/customer.h"
+#include "ps/internal/meta_message.pb.h"
 
 namespace ps {
 
@@ -184,11 +185,21 @@ void Van::Start() {
   receiver_thread_ = std::unique_ptr<std::thread>(
       new std::thread(&Van::Receiving, this));
 
+  if (!is_scheduler_) {
+    // let the schduler know myself
+    Message msg;
+    msg.recver = kScheduler;
+    auto ctrl = msg.meta.mutable_control();
+    ctrl->set_cmd(Control::ADD_NODE);
+    ctrl->add_node()->CopyFrom(my_node_);
+    Send_(msg);
+  }
   // wait until ready
   if (!ready_) usleep(500);
 }
 
 void Van::Stop() {
+  // TODO
   // exit_ = true;
   // monitor_thread_/
 
@@ -205,15 +216,9 @@ void Van::Connect(const Node& node) {
   CHECK(node.has_hostname()) << node.ShortDebugString();
 
   int id = node.id();
-  if (my_node_.hostname() == node.hostname() &&
-      my_node_.port() == node.port()) {
-    // update my id
-    my_node_.set_id(id);
-  }
 
   if (senders_.find(id) != senders_.end()) {
-    // already connected
-    return;
+    zmq_close(senders_[id]);
   }
 
   // worker doesn't need to connect to another worker. same for server
@@ -229,11 +234,10 @@ void Van::Connect(const Node& node) {
       << " or edit /etc/security/limits.conf";
 
   if (my_node_.has_id()) {
-
+    std::string my_id = "ps" + std::to_string(my_node_.id());
+    zmq_setsockopt(sender, ZMQ_IDENTITY, my_id.data(), my_id.size());
   }
 
-  std::string my_id = std::to_string(my_node_.id()); // address(my_node_);
-  zmq_setsockopt(sender, ZMQ_IDENTITY, my_id.data(), my_id.size());
 
   // connect
   std::string addr = "tcp://" + node.hostname() + ":" + std::to_string(node.port());
@@ -248,7 +252,7 @@ void Van::Connect(const Node& node) {
   senders_[id] = sender;
 }
 
-size_t Van::Send_(const Message& msg) {
+int Van::Send_(const Message& msg) {
   std::lock_guard<std::mutex> lk(mu_);
 
   // find the socket
@@ -311,26 +315,22 @@ size_t Van::Send_(const Message& msg) {
 }
 
 int Van::GetNodeID(const char* buf, size_t size) {
-  if (is_scheduler_) {
-    std::string net_id(buf, size);
-    auto it = node_ids_.find(net_id);
-    if (it == node_ids_.end()) {
-      return -1;
-    } else {
-      return it->second;
-    }
-  } else {
+  if (size > 2 && buf[0] == 'p' && buf[1] == 's') {
     int id = 0;
-    for (size_t i = 0; i < size; ++i) {
-      CHECK_LE(buf[i], '9');
-      CHECK_GE(buf[i], '0');
-      id = id * 10 + buf[i] - '0';
+    size_t i = 2;
+    for (; i < size; ++i) {
+      if (buf[i] >= '0' && buf[i] <= '9') {
+        id = id * 10 + buf[i] - '0';
+      } else {
+        break;
+      }
     }
-    return id;
+    if (i == size) return id;
   }
+  return Message::kInvalidNode;
 }
 
-size_t Van::Recv(Message* msg) {
+int Van::Recv(Message* msg) {
   msg->value.clear();
   size_t recv_bytes = 0;
   for (int i = 0; ; ++i) {
@@ -384,11 +384,69 @@ size_t Van::Recv(Message* msg) {
 }
 
 void Van::Receiving() {
+  // for scheduler usage
+  MetaMessage nodes;
+
   while (true) {
     Message msg; CHECK_GE(Recv(&msg), (size_t)0);
     if (msg.meta.has_control()) {
+      // do some management
+      const auto& ctrl = msg.meta.control();
+      if (ctrl.cmd() == Control::TERMINATE) {
+        break;
+      } else if (ctrl.cmd() == Control::ADD_NODE) {
+        // assign an id
+        if (msg.sender == Message::kInvalidNode) {
+          CHECK(is_scheduler_);
+          CHECK_EQ(ctrl.node_size(), 1);
+          auto node = msg.meta.mutable_control()->mutable_node(0);
+          if (node->role() == Node::SERVER) {
+            node->set_id(Postoffice::ServerRankToID(num_servers_));
+          } else {
+            CHECK_EQ(node->role(), Node::WORKER);
+            node->set_id(Postoffice::WorkerRankToID(num_workers_));
+          }
+          nodes.mutable_control()->add_node()->CopyFrom(*node);
+        }
 
+        // update my id
+        for (int i = 0; i < ctrl.node_size(); ++i) {
+          const auto& node = ctrl.node(i);
+          if (my_node_.hostname() == node.hostname() &&
+              my_node_.port() == node.port()) {
+            my_node_.set_id(node.id());
+            std::string rank = std::to_string(Postoffice::IDtoRank(node.id()));
+            setenv("DMLC_RANK", rank.c_str(), true);
+          }
+        }
+
+        // connect to these nodes
+        for (int i = 0; i < ctrl.node_size(); ++i) {
+          const auto& node = ctrl.node(i);
+          if (node.role() == Node::SERVER) ++num_servers_;
+          if (node.role() == Node::WORKER) ++num_workers_;
+          Connect(node);
+        }
+
+        if (num_servers_ == NumServers() &&
+            num_workers_ == NumWorkers()) {
+          if (is_scheduler_) {
+            nodes.mutable_control()->add_node()->CopyFrom(my_node_);
+            nodes.mutable_control()->set_cmd(Control::ADD_NODE);
+            Message back; back.meta = nodes;
+            for (int r : Postoffice::Get()->GetNodeIDs(
+                     kWorkerGroup & kServerGroup)) {
+              back.recver = r; Send_(back);
+            }
+          }
+          ready_ = true;
+        }
+      } else {
+        Postoffice::Get()->Manage(msg);
+      }
     } else {
+      CHECK_EQ(msg.sender, Message::kInvalidNode);
+      CHECK_EQ(msg.recver, Message::kInvalidNode);
       CHECK(msg.meta.has_customer_id());
       int id = msg.meta.customer_id();
       auto* obj = Postoffice::Get()->GetCustomer(id, 5);

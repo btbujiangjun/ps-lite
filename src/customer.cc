@@ -1,19 +1,19 @@
+#include "ps/internal/customer.h"
 #include "ps/internal/postoffice.h"
-
 namespace ps {
 
 
-Customer::Customer(int id, const Customer::Handle& recv_handle)
+Customer::Customer(int id, const Customer::RecvHandle& recv_handle)
     : id_(id), recv_handle_(recv_handle),
-      recv_thread_(Customer::Receiving, this) {
-  Postoffice::Get()->AddCustomer(id_, this);
+      recv_thread_(&Customer::Receiving, this) {
+  Postoffice::Get()->AddCustomer(this);
 }
 
 Customer::~Customer() {
   Message msg; msg.terminate = true;
   recv_queue_.Push(msg);
   recv_thread_.join();
-  Postoffice::Get()->RemoveCustomer(id_);
+  Postoffice::Get()->RemoveCustomer(this);
 }
 
 void Customer::WaitRequest(int timestamp) {
@@ -26,7 +26,7 @@ void Customer::WaitRequest(int timestamp) {
 
 int Customer::NewRequest(int recver) {
   std::lock_guard<std::mutex> lk(tracker_mu_);
-  int num = Postoffice::Get()->manager()->GetNodeIDs(recver).size();
+  int num = Postoffice::Get()->GetNodeIDs(recver).size();
   tracker_.push_back(std::make_pair(num, 0));
   return tracker_.size() - 1;
 }
@@ -36,7 +36,7 @@ void Customer::Receiving() {
     Message recv;
     recv_queue_.WaitAndPop(recv);
     if (recv.terminate) break;
-    Handle(recv);
+    recv_handle_(recv);
     if (!recv.meta.request()) {
       std::lock_guard<std::mutex> lk(tracker_mu_);
       tracker_[recv.meta.timestamp()].second ++;

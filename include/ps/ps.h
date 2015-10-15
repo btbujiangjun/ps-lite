@@ -5,7 +5,7 @@
 #pragma once
 #include <functional>
 #include "ps/base.h"
-
+#include "ps/internal/postoffice.h"
 namespace ps {
 
 /**
@@ -15,7 +15,7 @@ namespace ps {
  * in ps. This function will block until every nodes are started.
  */
 void Start() {
-
+  Postoffice::Get()->Start();
 }
 
 
@@ -26,22 +26,9 @@ void Start() {
  * every node is finalized.
  */
 void Finalize() {
-
+  Postoffice::Get()->Finalize();
 }
 
-/**
- * \brief Returns the number of worker nodes
- */
-inline int NumWorkers() {
-  return GetEnv("DMLC_NUM_WORKER", 1);
-}
-
-/**
- * \brief Returns the number of server nodes
- */
-inline int NumServers() {
-  return GetEnv("DMLC_NUM_SERVER", 0);
-}
 
 }  // namespace ps
 

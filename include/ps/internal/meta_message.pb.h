@@ -39,11 +39,13 @@ class MetaMessage;
 class Control;
 
 enum Control_Command {
-  Control_Command_ADD_NODE = 1
+  Control_Command_TERMINATE = 1,
+  Control_Command_ADD_NODE = 2,
+  Control_Command_BARRIER = 3
 };
 bool Control_Command_IsValid(int value);
-const Control_Command Control_Command_Command_MIN = Control_Command_ADD_NODE;
-const Control_Command Control_Command_Command_MAX = Control_Command_ADD_NODE;
+const Control_Command Control_Command_Command_MIN = Control_Command_TERMINATE;
+const Control_Command Control_Command_Command_MAX = Control_Command_BARRIER;
 const int Control_Command_Command_ARRAYSIZE = Control_Command_Command_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* Control_Command_descriptor();
@@ -274,7 +276,9 @@ class Control : public ::google::protobuf::Message {
   // nested types ----------------------------------------------------
 
   typedef Control_Command Command;
+  static const Command TERMINATE = Control_Command_TERMINATE;
   static const Command ADD_NODE = Control_Command_ADD_NODE;
+  static const Command BARRIER = Control_Command_BARRIER;
   static inline bool Command_IsValid(int value) {
     return Control_Command_IsValid(value);
   }
@@ -317,18 +321,28 @@ class Control : public ::google::protobuf::Message {
   inline ::google::protobuf::RepeatedPtrField< ::ps::Node >*
       mutable_node();
 
+  // optional int32 barrier_group = 3;
+  inline bool has_barrier_group() const;
+  inline void clear_barrier_group();
+  static const int kBarrierGroupFieldNumber = 3;
+  inline ::google::protobuf::int32 barrier_group() const;
+  inline void set_barrier_group(::google::protobuf::int32 value);
+
   // @@protoc_insertion_point(class_scope:ps.Control)
  private:
   inline void set_has_cmd();
   inline void clear_has_cmd();
+  inline void set_has_barrier_group();
+  inline void clear_has_barrier_group();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::google::protobuf::RepeatedPtrField< ::ps::Node > node_;
   int cmd_;
+  ::google::protobuf::int32 barrier_group_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
 
   friend void  protobuf_AddDesc_ps_2finternal_2fmeta_5fmessage_2eproto();
   friend void protobuf_AssignDesc_ps_2finternal_2fmeta_5fmessage_2eproto();
@@ -637,6 +651,28 @@ Control::node() const {
 inline ::google::protobuf::RepeatedPtrField< ::ps::Node >*
 Control::mutable_node() {
   return &node_;
+}
+
+// optional int32 barrier_group = 3;
+inline bool Control::has_barrier_group() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void Control::set_has_barrier_group() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void Control::clear_has_barrier_group() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void Control::clear_barrier_group() {
+  barrier_group_ = 0;
+  clear_has_barrier_group();
+}
+inline ::google::protobuf::int32 Control::barrier_group() const {
+  return barrier_group_;
+}
+inline void Control::set_barrier_group(::google::protobuf::int32 value) {
+  set_has_barrier_group();
+  barrier_group_ = value;
 }
 
 

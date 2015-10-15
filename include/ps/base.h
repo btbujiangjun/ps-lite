@@ -31,17 +31,18 @@ static const Key kMaxKey = std::numeric_limits<Key>::max();
 /*
  * \brief node ID for the scheduler
  */
-const static int kScheduler = 0;
+const static int kScheduler = 1;
 
 /**
  * \brief the server node group ID
  */
-const static int kServerGroup = 1;
+const static int kServerGroup = 2;
 
 /**
  * \brief the worker node group ID
  */
-const static int kWorkerGroup = 2;
+const static int kWorkerGroup = 4;
+
 
 
 /*!

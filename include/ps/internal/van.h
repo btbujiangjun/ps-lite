@@ -42,11 +42,20 @@ class Van {
    * \brief send a message, thread-safe
    * \return the number of bytes sent. -1 if failed
    */
-  size_t Send(const Message& msg) {
+  int Send(const Message& msg) {
     CHECK(ready_) << "call Start() first";
     return Send_(msg);
   }
 
+/**
+ * \brief return my node
+ *
+ */
+
+const Node& my_node() const {
+    CHECK(ready_) << "call Start() first";
+return my_node_;
+}
   /**
    * \brief stop van
    *
@@ -59,7 +68,7 @@ class Van {
   /**
    * \return interal version without ready check
    */
-  size_t Send_(const Message& msg);
+  int Send_(const Message& msg);
 
   /**
    * return the node id given the received identity
@@ -76,8 +85,7 @@ class Van {
    * \brief receive a packge
    * \return the number of bytes received. -1 if failed
    */
-  size_t Recv(Message* msg);
-
+  int Recv(Message* msg);
 
   /**
    * thread function for receving
@@ -108,12 +116,11 @@ class Van {
 
   std::mutex mu_;
 
-  size_t send_bytes_;
-  size_t recv_bytes_;
-  /**
-   * \brief map net_id to node_id, only used by the schduler
-   */
-  std::unordered_map<std::string, int> node_ids_;
+  size_t send_bytes_ = 0;
+  size_t recv_bytes_ = 0;
+
+int num_servers_ = 0;
+int num_workers_ = 0;
 
   /**
    * \brief node_id to the socket for sending data to this node

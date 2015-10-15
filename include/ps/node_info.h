@@ -1,6 +1,21 @@
 #pragma once
 #include <string>
+#include "ps/base.h"
 namespace ps {
+
+/**
+ * \brief Returns the number of worker nodes
+ */
+inline int NumWorkers() {
+  return GetEnv("DMLC_NUM_WORKER", 1);
+}
+
+/**
+ * \brief Returns the number of server nodes
+ */
+inline int NumServers() {
+  return GetEnv("DMLC_NUM_SERVER", 0);
+}
 
 /**
  * \brief query info about my node
@@ -12,7 +27,7 @@ class MyNode {
    * \ref GroupSize() - 1} .
    */
   static int Rank() {
-    return GetEnv("DMLC_MY_RANK", 0);
+    return GetEnv("DMLC_RANK", 0);
   }
 
   /**

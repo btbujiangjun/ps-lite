@@ -32,8 +32,11 @@ message MetaMessage {
 
 message Control {
   enum Command {
-    ADD_NODE = 1;
+    TERMINATE = 1;
+    ADD_NODE = 2;
+    BARRIER = 3;
   }
   required Command cmd = 1;
   repeated Node node = 2;
+  optional int32 barrier_group = 3;
 }

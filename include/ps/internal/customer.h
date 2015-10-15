@@ -2,18 +2,20 @@
 #include <mutex>
 #include <atomic>
 #include <condition_variable>
+#include <functional>
+#include <thread>
 #include "ps/internal/message.h"
 #include "ps/internal/threadsafe_queue.h"
 namespace ps {
 
 class Customer {
  public:
-  using Handle = std::function<void(const Message& recved)>;
-  Customer(int id, const Handle& recv_handle);
+  using RecvHandle = std::function<void(const Message& recved)>;
+  Customer(int id, const RecvHandle& recv_handle);
 
   ~Customer();
 
-  void id() { return id_; }
+  int id() { return id_; }
   /**
    * \brief accept a received message
    * \param recved the received the message
@@ -21,7 +23,6 @@ class Customer {
   void Accept(const Message& recved) { recv_queue_.Push(recved); }
 
   void WaitRequest(int timestamp);
-
 
   /**
    * \brief call before issuing a request
@@ -34,9 +35,9 @@ class Customer {
   int id_;
 
 
-  Handle recv_handle_;
+  RecvHandle recv_handle_;
   std::thread recv_thread_;
-  threadsafe_queue recv_queue_;
+  ThreadsafeQueue<Message> recv_queue_;
 
   std::mutex tracker_mu_;
   std::condition_variable tracker_cond_;

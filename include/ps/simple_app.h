@@ -1,11 +1,11 @@
 #pragma once
-#include "ps/internal/customer.h"
+#include "ps/internal/message.h"
+#include "ps/internal/postoffice.h"
 namespace ps {
 
 /**
  * \brief a simple app communicating <int, string> pair with others.
  */
-
 class SimpleApp {
  public:
 
@@ -36,10 +36,11 @@ class SimpleApp {
    * @param recved the received request/response
    * @param node this pointer
    */
-  using Handle = std::function<void(const RecvData& recved, SimpleApp* node)>;
-  explicit SimpleApp(int app_id, const Handle& handle) :
-      handle_(handle), Customer(app_id, RecvHandle) {
-    CHECK(handle_);
+  using RecvHandle = std::function<void(const RecvData& recved, SimpleApp* node)>;
+  explicit SimpleApp(int app_id, const RecvHandle& recv_handle) :
+      recv_handle_(recv_handle),
+      obj_(app_id, [this](const Message& recv){RunRecvHandle(recv);}) {
+    CHECK(recv_handle_) << "invalid recving handle";
   }
   virtual ~SimpleApp() { }
 
@@ -56,16 +57,16 @@ class SimpleApp {
     // setup message
     Message msg;
     msg.meta.set_head(req_head);
-    if (body.size()) msg.meta.set_body(req_body);
+    if (req_body.size()) msg.meta.set_body(req_body);
     int ts = obj_.NewRequest(recv_id);
     msg.meta.set_timestamp(ts);
     msg.meta.set_request(true);
     msg.meta.set_customer_id(obj_.id());
 
     // send
-    for (int r : Postoffice::Get()->manager()->GetNodeIDs(recv_id)) {
+    for (int r : Postoffice::Get()->GetNodeIDs(recv_id)) {
       msg.recver = r;
-      Postoffice::Get()->van()->Send(msg)
+      Postoffice::Get()->van()->Send(msg);
     }
     return ts;
   }
@@ -84,7 +85,6 @@ class SimpleApp {
    * \brief send back a response for a request
    *
    */
-
   void Response(const RecvData& req, const std::string& res_body = "") {
     // setup message
     Message msg;
@@ -96,21 +96,21 @@ class SimpleApp {
     msg.recver = req.sender;
 
     // send
-    Postoffice::Get()->van()->Send(msg)
+    Postoffice::Get()->van()->Send(msg);
   }
 
  private:
-  void RecvHandle(const Message& msg) {
+  void RunRecvHandle(const Message& msg) {
     RecvData recv;
     recv.head = msg.meta.head();
     recv.body = msg.meta.body();
     recv.request = msg.meta.request();
     recv.timestamp = msg.meta.timestamp();
     recv.sender = msg.sender;
-    handle_(recv);
+    recv_handle_(recv, this);
   }
 
-  Handle handle_;
+  RecvHandle recv_handle_;
   Customer obj_;
 };
 

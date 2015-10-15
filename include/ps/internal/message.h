@@ -1,6 +1,8 @@
 #pragma once
+#include <vector>
+#include "ps/sarray.h"
 #include "ps/internal/meta_message.pb.h"
-#include "ps/kv_pairs.h"
+// #include "ps/kv_pairs.h"
 namespace ps {
 
 enum DataType {
@@ -12,8 +14,10 @@ enum DataType {
 /**
  * \brief messages that communicated amaong nodes.
  */
+
 struct Message {
-  Message() : sender(-1), recver(-1) { }
+  static const int kInvalidNode = 0;
+  Message() : sender(kInvalidNode), recver(kInvalidNode) { }
   // Message(const Message& msg) : Message() {
   //   if (msg.head != Message::kEmpty) {
   //     meta.set_head(msg.head);
