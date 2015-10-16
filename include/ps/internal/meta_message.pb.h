@@ -182,6 +182,13 @@ class MetaMessage : public ::google::protobuf::Message {
   inline ::google::protobuf::RepeatedField< ::google::protobuf::int32 >*
       mutable_value_type();
 
+  // optional bool push = 9;
+  inline bool has_push() const;
+  inline void clear_push();
+  static const int kPushFieldNumber = 9;
+  inline bool push() const;
+  inline void set_push(bool value);
+
   // @@protoc_insertion_point(class_scope:ps.MetaMessage)
  private:
   inline void set_has_head();
@@ -198,6 +205,8 @@ class MetaMessage : public ::google::protobuf::Message {
   inline void clear_has_timestamp();
   inline void set_has_with_key();
   inline void clear_has_with_key();
+  inline void set_has_push();
+  inline void clear_has_push();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
@@ -205,14 +214,15 @@ class MetaMessage : public ::google::protobuf::Message {
   ::ps::Control* control_;
   ::google::protobuf::int32 head_;
   ::google::protobuf::int32 customer_id_;
+  ::google::protobuf::int32 timestamp_;
   bool request_;
   bool with_key_;
-  ::google::protobuf::int32 timestamp_;
+  bool push_;
   ::google::protobuf::RepeatedField< ::google::protobuf::int32 > value_type_;
   mutable int _value_type_cached_byte_size_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(8 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(9 + 31) / 32];
 
   friend void  protobuf_AddDesc_ps_2finternal_2fmeta_5fmessage_2eproto();
   friend void protobuf_AssignDesc_ps_2finternal_2fmeta_5fmessage_2eproto();
@@ -599,6 +609,28 @@ MetaMessage::value_type() const {
 inline ::google::protobuf::RepeatedField< ::google::protobuf::int32 >*
 MetaMessage::mutable_value_type() {
   return &value_type_;
+}
+
+// optional bool push = 9;
+inline bool MetaMessage::has_push() const {
+  return (_has_bits_[0] & 0x00000100u) != 0;
+}
+inline void MetaMessage::set_has_push() {
+  _has_bits_[0] |= 0x00000100u;
+}
+inline void MetaMessage::clear_has_push() {
+  _has_bits_[0] &= ~0x00000100u;
+}
+inline void MetaMessage::clear_push() {
+  push_ = false;
+  clear_has_push();
+}
+inline bool MetaMessage::push() const {
+  return push_;
+}
+inline void MetaMessage::set_push(bool value) {
+  set_has_push();
+  push_ = value;
 }
 
 // -------------------------------------------------------------------

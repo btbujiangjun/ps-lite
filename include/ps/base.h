@@ -1,6 +1,5 @@
 #pragma once
 #include <limits>
-#include "glog/logging.h"
 #include "ps/internal/utils.h"
 namespace ps {
 

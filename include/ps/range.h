@@ -1,5 +1,5 @@
-#include "ps/base.h"
-
+#include "ps/internal/utils.h"
+#pragma once
 namespace ps {
 
 /**
@@ -7,10 +7,15 @@ namespace ps {
  */
 class Range {
  public:
+  Range() : Range(0,0) {}
+  Range(uint64_t begin, uint64_t end) : begin_(begin), end_(end) { }
 
+  uint64_t begin() { return begin_; }
+  uint64_t end() { return end_; }
+  uint64_t size() const { return end_ - begin_; }
  private:
-  Key begin_;
-  Key end_;
+  uint64_t begin_;
+  uint64_t end_;
 };
 
 }  // namespace ps

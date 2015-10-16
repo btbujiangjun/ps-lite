@@ -35,12 +35,12 @@ class Customer {
    * \brief return the number of responses received for the request. threadsafe
    * \param timestamp the timestamp of the request
    */
-  int QueryResponse(int timestamp);
+  int NumResponse(int timestamp);
 
   /**
    * \brief
    */
-  int AddResponse(int timestamp, int num = 1);
+  void AddResponse(int timestamp, int num = 1);
 
   /**
    * \brief accept a received message from \ref Van. threadsafe

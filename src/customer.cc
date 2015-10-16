@@ -17,6 +17,13 @@ Customer::~Customer() {
   recv_thread_->join();
 }
 
+int Customer::NewRequest(int recver) {
+  std::lock_guard<std::mutex> lk(tracker_mu_);
+  int num = Postoffice::Get()->GetNodeIDs(recver).size();
+  tracker_.push_back(std::make_pair(num, 0));
+  return tracker_.size() - 1;
+}
+
 void Customer::WaitRequest(int timestamp) {
   std::unique_lock<std::mutex> lk(tracker_mu_);
   tracker_cond_.wait(lk, [this, timestamp]{
@@ -24,16 +31,14 @@ void Customer::WaitRequest(int timestamp) {
     });
 }
 
-int Customer::QueryResponse(int timestamp) {
+int Customer::NumResponse(int timestamp) {
   std::lock_guard<std::mutex> lk(tracker_mu_);
   return tracker_[timestamp].second;
 }
 
-int Customer::NewRequest(int recver) {
+void Customer::AddResponse(int timestamp, int num) {
   std::lock_guard<std::mutex> lk(tracker_mu_);
-  int num = Postoffice::Get()->GetNodeIDs(recver).size();
-  tracker_.push_back(std::make_pair(num, 0));
-  return tracker_.size() - 1;
+  tracker_[timestamp].second += num;
 }
 
 void Customer::Receiving() {

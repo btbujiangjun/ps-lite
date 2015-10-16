@@ -13,12 +13,19 @@ struct Message {
   Message() : sender(kInvalidNode), recver(kInvalidNode) { }
   MetaMessage meta;
 
-  SArray<Key> key;
-  std::vector<SArray<char> > value;
+  std::vector<SArray<char> > data;
+
+  template <typename V>
+  void AddData(const SArray<V>& val) {
+
+  }
 
   int sender;
   int recver;
 
+
+  SArray<char> key;
+  std::vector<SArray<char> > value;
   template <typename V>
   void AddValue(const SArray<V>& val) {
 

@@ -1,5 +1,6 @@
 #pragma once
-#include "./base.h"
+#include "ps/internal/utils.h"
+#include "ps/range.h"
 #include <memory>
 namespace ps {
 
@@ -73,7 +74,6 @@ class SArray {
       reset(data, size, [](V* data) { });
     }
   }
-
 
   /**
    * \brief copy from a c-array
@@ -206,8 +206,34 @@ class SArray {
   size_t size_;
   size_t capacity_;
   std::shared_ptr<V> ptr_;
-
 };
+
+
+/**
+ * \brief Find the index range of a segment of a sorted array such that the
+ * entries in this segment is within [lower, upper). Assume
+ * array values are ordered.
+ *
+ * An example
+ * \code{cpp}
+ * SArray<int> a{1 3 5 7 9};
+ * CHECK_EQ(Range(1,3), FindRange(a, 2, 7);
+ * \endcode
+ *
+ * \param arr the source array
+ * \param lower the lower bound
+ * \param upper the upper bound
+ *
+ * \return the index range
+ */
+template<typename V>
+Range FindRange(const SArray<V>& arr, V lower, V upper) {
+  if (upper <= lower) return Range(0,0);
+  auto lb = std::lower_bound(arr.begin(), arr.end(), lower);
+  auto ub = std::lower_bound(arr.begin(), arr.end(), upper);
+  return Range(lb - arr.begin(), ub - arr.begin());
+}
+
 
 /**
  * \brief print a debug string

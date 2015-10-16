@@ -1,4 +1,7 @@
 #pragma once
+
+#include "glog/logging.h"
+
 namespace ps {
 
 #ifdef _MSC_VER
