@@ -28,6 +28,7 @@ int main(int argc, char *argv[]) {
       app.Wait(t);
     }
   }
+
   Finalize();
 
   CHECK_EQ(num, n);

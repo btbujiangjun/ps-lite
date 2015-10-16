@@ -45,6 +45,7 @@ class SimpleApp {
     CHECK(recv_handle_) << "invalid recving handle";
   }
 
+  /** \brief deconstructor */
   virtual ~SimpleApp() { }
 
   /**

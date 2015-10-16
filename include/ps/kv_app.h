@@ -2,6 +2,7 @@
 #include "ps/internal/customer.h"
 namespace ps {
 
+
 /**
  * \brief A worker node that can \ref Push (\ref Pull) key-value pairs to (from) server
  * nodes
@@ -17,11 +18,13 @@ class KVWorker {
    *
    * \param app_id the app id, should match with \ref KVServer's id
    */
-  explicit KVWorker(int app_id) {}
+  explicit KVWorker(int app_id) :
+      obj_(app_id, [this](const Message& recv){ RecvHandle(recv); }) {
+    // TODO
+    // slicer_ = ...
+  }
 
-  /**
-   * \brief deconstructor
-   */
+  /** \brief deconstructor */
   ~KVWorker() { }
 
   /**
@@ -31,7 +34,7 @@ class KVWorker {
    * pull is actually finished. Namely the kv pairs have already written into
    * servers' data structure or the kv pairs have already pulled back.
    */
-  using Callaback = std::function<void()>;
+  using Callback = std::function<void()>;
 
   /**
    * \brief Pushes a list of key-value pairs to all server nodes.
@@ -80,6 +83,8 @@ class KVWorker {
            const std::vector<int>& val_lens = {},
            int cmd = 0,
            const Callback& cb = nullptr) {
+    return ZPush(
+        SArray<Key>(keys), SArray<Val>(vals), SArray<int>(val_lens), cmd, cb);
   }
 
 
@@ -114,8 +119,14 @@ class KVWorker {
            std::vector<int>* val_lens = nullptr,
            int cmd = 0,
            const Callback& cb = nullptr) {
+    SArray<Val> svals(vals);
+    if (val_lens) {
+      SArray<int> sval_lens(val_lens);
+      return ZPull(SArray<Key>(keys), &svals, &sval_lens, cmd, cb);
+    } else {
+      return ZPull(SArray<Key>(keys), &svals, nullptr, cmd, cb);
+    }
   }
-
 
   /**
    * \brief Waits until a push or pull has been finished
@@ -129,10 +140,7 @@ class KVWorker {
    *
    * \param timestamp the timestamp returned by the push or pull
    */
-  void Wait(int timestamp) {
-
-  }
-
+  void Wait(int timestamp) { obj_.WaitRequest(timestamp); }
 
   /**
    * \brief zero-copy Push
@@ -165,29 +173,47 @@ class KVWorker {
            const Callback& cb = nullptr) {
   }
 
+  /**
+   * \brief key-value pairs for sending
+   */
+  struct SendKVs {
+    /** \brief the list of keys */
+    SArray<Key> keys;
+    /** \brief the according values */
+    SArray<Val> vals;
+    /** \brief the according value lengths (could be empty) */
+    SArray<int> val_lens;
+    /** \brief receiver's node id, if = 0, then will not be sent */
+    int recver;
+  };
+
+  /**
+   * \brief a slicer partitions a key-value list according to the key ranges
+   * \param send the kv list for partitioning
+   * \param ranges the key ranges, ranges[i] is the key range of server i
+   * \param sliced the sliced lists. slices[i] should only contains keys in
+   * ranges[i] and the according values
+   */
+  using Slicer = std::function<void(const SendKVs& send,
+                                    const std::vector<Range>& ranges,
+                                    std::vector<SendKVs>* sliced)>;
+
+  /**
+   * \brief set a user-defined slicer
+   */
+  void set_slicer(const Slicer& slicer) { slicer_ = slicer; }
+
  private:
+  /** \brief internal receive handle */
+  void RecvHandle(const Message& msg);
 
+  /** \brief kv list slicer */
+  Slicer slicer_;
+
+  /** \brief ps internal object */
+  Customer obj_;
 };
 
-/**
- * \brief the received key-value pairs, with additional info
- */
-struct RecvKVs {
-  /** \brief the list of keys */
-  SArray<Key> keys;
-  /** \brief the according values */
-  SArray<Key> vals;
-  /** \brief the according value lengths (could be empty) */
-  SArray<Key> val_lens;
-  /** \brief the int cmd */
-  int cmd;
-  /** \brief whether or not this is a push request */
-  bool push;
-  /** \brief sender's node id */
-  int sender;
-  /** \brief the associated timestamp */
-  int timestamp;
-};
 
 /**
  * \brief A server node for maintaining key-value pairs
@@ -196,6 +222,26 @@ struct RecvKVs {
 template <typename Val>
 class KVServer {
  public:
+  /**
+   * \brief received key-value pairs, with additional info
+   */
+  struct RecvKVs {
+    /** \brief the list of keys */
+    SArray<Key> keys;
+    /** \brief the according values */
+    SArray<Val> vals;
+    /** \brief the according value lengths (could be empty) */
+    SArray<int> val_lens;
+    /** \brief the int cmd */
+    int cmd;
+    /** \brief whether or not this is a push request */
+    bool push;
+    /** \brief sender's node id */
+    int sender;
+    /** \brief the associated timestamp */
+    int timestamp;
+  };
+
   /**
    * \brief the handle to process a push/pull request from a worker
    * \param recved one request received from one worker
@@ -208,20 +254,31 @@ class KVServer {
    * \param app_id the app id, should match with \ref KVWorker's id
    * \param req_handle the handle for processing a request
    */
-  KVServer(int app_id, const ReqHandle& req_handle) { }
+  KVServer(int app_id, const ReqHandle& req_handle) :
+      req_handle_(req_handle),
+      obj_(app_id, [this](const Message& msg){ RecvHandle(msg); }) {
+    CHECK(req_handle_) << "invalid request handle";
+  }
 
   /**
    * \brief response to the push/pull request
    * \param req the request received from the worker
    * \param res the response that will send back to the worker
    */
-  void Response(const RecvKVs req, const RecvKVs res = RecvKVs()) {
+  void Response(const RecvKVs& req, const RecvKVs& res = RecvKVs());
 
-  }
  private:
+  /** \brief internal receive handle */
+  void RecvHandle(const Message& msg);
 
+  /** \brief request handle */
+  ReqHandle req_handle_;
+  /** \brief ps internal object */
+  Customer obj_;
 };
 
+
+///////////////////////////////////////////////////////////////////////////////
 
 
   // Message(const Message& msg) : Message() {
