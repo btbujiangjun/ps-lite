@@ -19,6 +19,5 @@ struct Message {
   int sender;
   int recver;
 
-  bool terminate;
 };
 }  // namespace ps

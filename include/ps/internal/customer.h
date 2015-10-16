@@ -4,6 +4,7 @@
 #include <condition_variable>
 #include <functional>
 #include <thread>
+#include <memory>
 #include "ps/internal/message.h"
 #include "ps/internal/threadsafe_queue.h"
 namespace ps {
@@ -34,14 +35,14 @@ class Customer {
   void Receiving();
   int id_;
 
-
   RecvHandle recv_handle_;
-  std::thread recv_thread_;
   ThreadsafeQueue<Message> recv_queue_;
+  std::unique_ptr<std::thread> recv_thread_;
 
   std::mutex tracker_mu_;
   std::condition_variable tracker_cond_;
   std::vector<std::pair<int, int>> tracker_;
+
 };
 
 }  // namespace ps

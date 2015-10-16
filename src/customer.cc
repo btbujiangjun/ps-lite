@@ -4,16 +4,17 @@ namespace ps {
 
 
 Customer::Customer(int id, const Customer::RecvHandle& recv_handle)
-    : id_(id), recv_handle_(recv_handle),
-      recv_thread_(&Customer::Receiving, this) {
+    : id_(id), recv_handle_(recv_handle) {
   Postoffice::Get()->AddCustomer(this);
+  recv_thread_ = std::unique_ptr<std::thread>(new std::thread(&Customer::Receiving, this));
 }
 
 Customer::~Customer() {
-  Message msg; msg.terminate = true;
-  recv_queue_.Push(msg);
-  recv_thread_.join();
   Postoffice::Get()->RemoveCustomer(this);
+  Message msg;
+  msg.meta.mutable_control()->set_cmd(Control::TERMINATE);
+  recv_queue_.Push(msg);
+  recv_thread_->join();
 }
 
 void Customer::WaitRequest(int timestamp) {
@@ -34,8 +35,11 @@ int Customer::NewRequest(int recver) {
 void Customer::Receiving() {
   while (true) {
     Message recv;
-    recv_queue_.WaitAndPop(recv);
-    if (recv.terminate) break;
+    recv_queue_.WaitAndPop(&recv);
+    if (recv.meta.has_control() &&
+        recv.meta.control().cmd() == Control::TERMINATE) {
+      break;
+    }
     recv_handle_(recv);
     if (!recv.meta.request()) {
       std::lock_guard<std::mutex> lk(tracker_mu_);

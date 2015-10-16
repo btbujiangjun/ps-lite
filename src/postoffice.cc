@@ -9,8 +9,7 @@ void Postoffice::Start(const char* argv0) {
   if (argv0) {
     google::InitGoogleLogging(argv0);
   } else {
-    char name[] = "ps-lite";
-    google::InitGoogleLogging(name);
+    google::InitGoogleLogging("ps-lite\0");
   }
 
   // init node info.
@@ -45,6 +44,7 @@ void Postoffice::Start(const char* argv0) {
 }
 
 void Postoffice::Finalize() {
+  Barrier(kWorkerGroup + kServerGroup + kScheduler);
   van_->Stop();
 }
 
@@ -81,8 +81,6 @@ Customer* Postoffice::GetCustomer(int id, int timeout) const {
 }
 
 void Postoffice::Barrier(int node_group) {
-  std::lock_guard<std::mutex> lk(mu_);
-
   if (GetNodeIDs(node_group).size() <= 1) return;
   auto role = van_->my_node().role();
   if (role == Node::SCHEDULER) {
@@ -113,8 +111,8 @@ void Postoffice::Manage(const Message& recv) {
   if (ctrl.cmd() == Control::BARRIER && !recv.meta.request()) {
     barrier_mu_.lock();
     barrier_done_ = true;
-    barrier_cond_.notify_all();
     barrier_mu_.unlock();
+    barrier_cond_.notify_all();
   }
 }
 }  // namespace ps

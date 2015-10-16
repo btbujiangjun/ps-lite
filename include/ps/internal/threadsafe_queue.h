@@ -2,6 +2,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <memory>
+#include "ps/base.h"
 namespace ps {
 
 /**
@@ -9,22 +10,25 @@ namespace ps {
  */
 template<typename T> class ThreadsafeQueue {
  public:
+  ThreadsafeQueue() { }
+  ~ThreadsafeQueue() { }
   void Push(T new_value) {
-    std::lock_guard<std::mutex> lk(mut);
-    data_queue.push(std::move(new_value));
-    data_cond.notify_all();
+    mu_.lock();
+    queue_.push(std::move(new_value));
+    mu_.unlock();
+    cond_.notify_all();
   }
 
-  void WaitAndPop(T& value) {
-    std::unique_lock<std::mutex> lk(mut);
-    data_cond.wait(lk, [this]{return !data_queue.empty();});
-    value = std::move(data_queue.front());
-    data_queue.pop();
+  void WaitAndPop(T* value) {
+    std::unique_lock<std::mutex> lk(mu_);
+    cond_.wait(lk, [this]{return !queue_.empty();});
+    *value = std::move(queue_.front());
+    queue_.pop();
   }
  private:
-  mutable std::mutex mut;
-  std::queue<T> data_queue;
-  std::condition_variable data_cond;
+  mutable std::mutex mu_;
+  std::queue<T> queue_;
+  std::condition_variable cond_;
 };
 
 } // namespace ps

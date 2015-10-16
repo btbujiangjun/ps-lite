@@ -26,7 +26,6 @@ CFLAGS = -std=c++11 -msse2 -fPIC -O0 -ggdb -Wall -finline-functions $(INCPATH) $
 PS_LIB = build/libps.a
 # PS_MAIN = build/libps_main.a
 
--include tests/test.mk
 
 all: deps ps test #guide
 
@@ -69,4 +68,8 @@ include make/deps.mk
 deps: gflags glog protobuf zmq lz4 cityhash
 
 # test
+
+-include tests/test.mk
+
 test: $(TEST)
+	echo $(TEST)

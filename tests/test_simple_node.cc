@@ -13,16 +13,15 @@ void Handle(const SimpleApp::RecvData& data, SimpleApp* app) {
 }
 
 int main(int argc, char *argv[]) {
+  int n = 100;
   Start();
   SimpleApp app(0, Handle);
 
-  int n = 100;
   if (MyNode::IsScheduler()) {
-    LOG(ERROR) << "xxx";
     std::vector<int> ts;
     for (int i = 0; i < n; ++i) {
-      ts.push_back(app.Request(
-          1, "test", kScheduler + kServerGroup + kWorkerGroup));
+      int recver = kScheduler + kServerGroup + kWorkerGroup;
+      ts.push_back(app.Request(1, "test", recver));
     }
 
     for (int t : ts) {
@@ -31,6 +30,6 @@ int main(int argc, char *argv[]) {
   }
   Finalize();
 
-  CHECK_EQ(num, 100);
+  CHECK_EQ(num, n);
   return 0;
 }

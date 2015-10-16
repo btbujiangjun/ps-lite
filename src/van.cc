@@ -163,14 +163,14 @@ void Van::Start() {
   Connect(scheduler_);
 
   // start monitor
-  if (is_scheduler_) {
-    CHECK(!zmq_socket_monitor(receiver_, "inproc://monitor", ZMQ_EVENT_ALL));
-  } else {
-    CHECK(!zmq_socket_monitor(
-        senders_[kScheduler], "inproc://monitor", ZMQ_EVENT_ALL));
-  }
-  monitor_thread_ = std::unique_ptr<std::thread>(
-      new std::thread(&Van::Monitoring, this));
+  // if (is_scheduler_) {
+  //   CHECK(!zmq_socket_monitor(receiver_, "inproc://monitor", ZMQ_EVENT_ALL));
+  // } else {
+  //   CHECK(!zmq_socket_monitor(
+  //       senders_[kScheduler], "inproc://monitor", ZMQ_EVENT_ALL));
+  // }
+  // monitor_thread_ = std::unique_ptr<std::thread>(
+  //     new std::thread(&Van::Monitoring, this));
 
   // start receiver
   receiver_thread_ = std::unique_ptr<std::thread>(
@@ -190,12 +190,14 @@ void Van::Start() {
 }
 
 void Van::Stop() {
-  // TODO
-  // exit_ = true;
-  // monitor_thread_/
-
   // stop threads
+  Message exit;
+  exit.meta.mutable_control()->set_cmd(Control::TERMINATE);
+  exit.recver = my_node_.id();
+  Send_(exit);
+  receiver_thread_->join();
 
+  // close sockets
   for (auto& it : senders_) zmq_close(it.second);
   zmq_close(receiver_);
   zmq_ctx_destroy(context_);
@@ -212,9 +214,9 @@ void Van::Connect(const Node& node) {
     zmq_close(senders_[id]);
   }
 
-  // worker doesn't need to connect to another worker. same for server
+  // worker doesn't need to connect to the other workers. same for server
   if ((node.role() == my_node_.role()) &&
-      (node.role() != Node::SCHEDULER)) {
+      (node.id() != my_node_.id())) {
     return;
   }
 
@@ -452,6 +454,7 @@ void Van::Receiving() {
           CHECK(ctrl.has_barrier_group());
           int group = ctrl.barrier_group();
           ++ barrier_count_[group];
+          LOG(ERROR) << barrier_count_[group];
           if (barrier_count_[group] ==
               (int)Postoffice::Get()->GetNodeIDs(group).size()) {
             barrier_count_[group] = 0;
@@ -468,8 +471,8 @@ void Van::Receiving() {
         }
       }
     } else {
-      CHECK_EQ(msg.sender, Message::kInvalidNode);
-      CHECK_EQ(msg.recver, Message::kInvalidNode);
+      CHECK_NE(msg.sender, Message::kInvalidNode);
+      CHECK_NE(msg.recver, Message::kInvalidNode);
       CHECK(msg.meta.has_customer_id());
       int id = msg.meta.customer_id();
       auto* obj = Postoffice::Get()->GetCustomer(id, 5);
