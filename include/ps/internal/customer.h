@@ -17,20 +17,36 @@ class Customer {
   ~Customer();
 
   int id() { return id_; }
-  /**
-   * \brief accept a received message
-   * \param recved the received the message
-   */
-  void Accept(const Message& recved) { recv_queue_.Push(recved); }
-
-  void WaitRequest(int timestamp);
 
   /**
-   * \brief call before issuing a request
-   * \return return the
+   * \brief call before issuing a request. threadsafe
+   * \return return the timestamp of this request
    */
   int NewRequest(int recver);
 
+
+  /**
+   * \brief wait until the request is finished. threadsafe
+   * \param timestamp the timestamp of the request
+   */
+  void WaitRequest(int timestamp);
+
+  /**
+   * \brief return the number of responses received for the request. threadsafe
+   * \param timestamp the timestamp of the request
+   */
+  int QueryResponse(int timestamp);
+
+  /**
+   * \brief
+   */
+  int AddResponse(int timestamp, int num = 1);
+
+  /**
+   * \brief accept a received message from \ref Van. threadsafe
+   * \param recved the received the message
+   */
+  void Accept(const Message& recved) { recv_queue_.Push(recved); }
  private:
   void Receiving();
   int id_;

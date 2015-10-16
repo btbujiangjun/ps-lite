@@ -17,6 +17,7 @@ message MetaMessage {
   // false: the response task to the request task with the same *time*
   optional bool request = 4 [default = false];
 
+
   // the unique id of an customer
   optional int32 customer_id = 5;
 
@@ -28,6 +29,9 @@ message MetaMessage {
 
   // data type of message.value[i]
   repeated int32 value_type = 8 [packed=true];
+
+  // whether or not a push message
+  optional bool push = 9;
 }
 
 message Control {

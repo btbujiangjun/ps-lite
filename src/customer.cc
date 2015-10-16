@@ -18,11 +18,15 @@ Customer::~Customer() {
 }
 
 void Customer::WaitRequest(int timestamp) {
-  // std::
   std::unique_lock<std::mutex> lk(tracker_mu_);
   tracker_cond_.wait(lk, [this, timestamp]{
       return tracker_[timestamp].first == tracker_[timestamp].second;
     });
+}
+
+int Customer::QueryResponse(int timestamp) {
+  std::lock_guard<std::mutex> lk(tracker_mu_);
+  return tracker_[timestamp].second;
 }
 
 int Customer::NewRequest(int recver) {

@@ -119,13 +119,7 @@ class KVWorker {
            std::vector<int>* val_lens = nullptr,
            int cmd = 0,
            const Callback& cb = nullptr) {
-    SArray<Val> svals(vals);
-    if (val_lens) {
-      SArray<int> sval_lens(val_lens);
-      return ZPull(SArray<Key>(keys), &svals, &sval_lens, cmd, cb);
-    } else {
-      return ZPull(SArray<Key>(keys), &svals, nullptr, cmd, cb);
-    }
+    return Pull_(SArray<Key>(keys), vals, val_lens, cmd, cb);
   }
 
   /**
@@ -151,10 +145,17 @@ class KVWorker {
    * finished.
    */
   int ZPush(const SArray<Key>& keys,
-           const SArray<Val>& vals,
-           const SArray<int>& val_lens = {},
-           int cmd = 0,
-           const Callback& cb = nullptr) {
+            const SArray<Val>& vals,
+            const SArray<int>& val_lens = {},
+            int cmd = 0,
+            const Callback& cb = nullptr) {
+    int ts = obj_.NewRequest(kServerGroup);
+    AddCallback(ts, cb);
+    SendKVs kvs;
+    kvs.keys = keys;
+    kvs.vals = vals;
+    kvs.val_lens = val_lens;
+    Send(ts, true, cmd, kvs);
   }
 
 
@@ -166,11 +167,12 @@ class KVWorker {
    * responsibility to keep the content to be not changed before actually
    * finished.
    */
-  int ZPush(const SArray<Key>& keys,
-           const SArray<Val>* vals,
-           const SArray<int>* val_lens = nullptr,
-           int cmd = 0,
-           const Callback& cb = nullptr) {
+  int ZPull(const SArray<Key>& keys,
+            SArray<Val>* vals,
+            SArray<int>* val_lens = nullptr,
+            int cmd = 0,
+            const Callback& cb = nullptr) {
+    return Pull_(keys, vals, val_lens, cmd, cb);
   }
 
   /**
@@ -183,7 +185,7 @@ class KVWorker {
     SArray<Val> vals;
     /** \brief the according value lengths (could be empty) */
     SArray<int> val_lens;
-    /** \brief receiver's node id, if = 0, then will not be sent */
+    /** \brief receiver's node id, if = 0, then it will not be sent */
     int recver;
   };
 
@@ -201,15 +203,100 @@ class KVWorker {
   /**
    * \brief set a user-defined slicer
    */
-  void set_slicer(const Slicer& slicer) { slicer_ = slicer; }
+  void set_slicer(const Slicer& slicer) {
+    CHECK(slicer); slicer_ = slicer;
+  }
 
  private:
-  /** \brief internal receive handle */
-  void RecvHandle(const Message& msg);
 
+  template <typename C>
+  int Pull_(const SArray<Key>& keys, C* vals, C* val_lens,
+            int cmd, const Callback& cb) {
+    int ts = obj_.NewRequest(kServerGroup);
+    mu_.lock();
+    auto& it = recv_kvs_[ts];
+    it.key = keys;
+    if (val_lens) {
+      val_lens->resize(keys.size());
+      it.val_lens = val_lens->data();
+    }
+    mu_.unlock();
+
+    AddCallback(ts, [this, ts, vals, cb](){
+        mu_.lock();
+        // TODO
+        mu_.unlock();
+        if (cb) cb();
+      });
+    SendKVs kvs;
+    kvs.keys = keys;
+    Send(ts, false, cmd, kvs);
+    return ts;
+  }
+  /**
+   * \brief add a callback for a request. threadsafe.
+   *
+   * @param cb callback
+   * @param timestamp the timestamp of the request
+   */
+  void AddCallback(int timestamp, const Callback& cb) {
+    if (!cb) return;
+    std::lock_guard<std::mutex> lk(mu_);
+    callbacks_[timestamp] = cb;
+  }
+
+  /**
+   * \brief send the kv list to all servers
+   *
+   * @param timestamp the timestamp of the request
+   * @param push whether or not it is a push request
+   * @param cmd command
+   */
+
+  void Send(int timestamp, bool push, int cmd, const SendKVs& kvs) {
+    std::vector<KvsKVs> sliced;
+    slicer_(kvs, Postoffice::Get()->GetServerKeyRanges(), &sliced);
+    int skipped = 0;
+    for (const auto& s : sliced) {
+      if (s.recver == 0) { ++ skipped; continue; }
+      Message msg;
+      msg.meta.set_customer_id(obj_.id());
+      msg.meta.set_request(true);
+      msg.meta.set_push(push);
+      msg.meta.set_head(cmd);
+      msg.meta.set_timestamp(timestamp);
+      if (s.keys.size()) msg.keys = s.keys;
+      if (s.vals.size()) msg.AddValue(s.vals);
+      if (s.val_lens.size()) msg.AddValue(s.val_lens);
+      msg.recver = s.recver;
+      Postoffice::Get()->van()->Send(msg);
+    }
+    obj_.AddResponse(ts, skipped);
+  }
+
+  /**
+   * \brief data received from servers
+   *
+   */
+
+  struct RecvKVs {
+    SArray<K> key;
+    int* val_lens = nullptr;
+    std::vector<std::pair<K, SArray<V>>> slices;
+
+  };
+
+  std::unordered_map<int, RecvKVs> recv_kvs_;
+
+  /** \brief internal receive handle */
+  void RecvHandle(const Message& msg) {
+
+  }
+  std::unordered_map<int, Callback> callbacks_;
+
+  std::mutex mu_;
   /** \brief kv list slicer */
   Slicer slicer_;
-
   /** \brief ps internal object */
   Customer obj_;
 };

@@ -19,5 +19,9 @@ struct Message {
   int sender;
   int recver;
 
+  template <typename V>
+  void AddValue(const SArray<V>& val) {
+
+  }
 };
 }  // namespace ps

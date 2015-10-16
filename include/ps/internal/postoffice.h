@@ -52,6 +52,12 @@ class Postoffice {
     return it->second;
   }
 
+  /**
+   * \brief return the key ranges of all server nodes
+   */
+
+  const std::vector<Range>& GetServerKeyRanges();
+
   // /**
   //  * \brief get the key ranges of a node (group)
   //  */
