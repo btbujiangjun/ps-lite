@@ -1,48 +1,227 @@
-// #include "./app.h"
+#include "ps/base.h"
+#include "ps/internal/customer.h"
 namespace ps {
 
 /**
- * \brief a list of key-value pairs
- * \tparam Val the value type
+ * \brief A worker node that can \ref Push (\ref Pull) key-value pairs to (from) server
+ * nodes
+ *
+ * \tparam Val the type of value, which should be primitive types such as
+ * int32_t and float
  */
-template <typename Val>
-struct KVPairs {
-  KVPairs() : cmd(kEmpty) {}
-  static const int kEmpty = -1;
+template<typename Val>
+class KVWorker {
+ public:
+  /**
+   * \brief constructor
+   *
+   * \param app_id the app id, should match with \ref KVServer's id
+   */
+  explicit KVWorker(int app_id) {}
 
   /**
-   * \brief an int optional command.
+   * \brief deconstructor
    */
-  int cmd;
+  ~KVWorker() { }
 
   /**
-   * \brief a list of keys
+   * \brief callback function for \ref Push and \ref Pull
+   *
+   * It is called by the data receiving thread of this instance when the push or
+   * pull is actually finished. Namely the kv pairs have already written into
+   * servers' data structure or the kv pairs have already pulled back.
    */
-  SArray<Key> keys;
+  using Callaback = std::function<void()>;
 
   /**
-   * \brief the according values
+   * \brief Pushes a list of key-value pairs to all server nodes.
+   *
+   * This function pushes a KV list specified by \a keys and \a vals to all
+   * server nodes. The keys must be unique and sorted in a increasing order.
+   * The length of a value can be more than one. If \a val_lens is
+   * not specified, then the length of a value is determined by
+   * `k=vals.size()/keys.size()`.  The \a i-th KV pair is then
+   *
+   * \verbatim {keys[i], (vals[i*k], ..., vals[(i+1)*k-1])} \endverbatim
+   *
+   * Sample usage: the following codes push two KV pairs `{1, (1.1, 1.2)}` and `{3,
+   * (3.1,3.2)}` to server nodes, where the value is a length-2 float vector
+   * \code
+   *   KVWorker<float> w;
+   *   std::vector<Key> keys = {1, 3};
+   *   std::vector<float> vals = {1.1, 1.2, 3.1, 3.2};
+   *   w.Push(keys, vals);
+   * \endcode
+   *
+   * The value length can be various, in that case \a val_lens should be
+   * given. And the following format is assumed. Let
+
+   * \verbatim n = val_lens[0] + .. + val_lens[i-1]  \endverbatim
+   *
+   * then the \a i-th KV pair is presented as
+   *
+   * \verbatim {keys[i], (vals[n], ..., vals[val_lens[i]+n-1])} \endverbatim
+   *
+   * The KV list is partitioned and sent based on the key range each server
+   * maintaining. This function returns without waiting the data are sent
+   * actually. Instead, use either \ref Wait or the callback to know when
+   * finished. This function is thread-safe.
+   *
+   * @param keys a list of keys, must be unique and sorted in increasing order
+   * @param vals the according values
+   * @param val_lens optional, val_lens[i] stores the value length of the \a
+   * i-th KV pair
+   * @param cmd an optional command sent to the servers
+   * @param cb the callback which is called when the push is finished.
+   * @return the timestamp of this request
    */
-  SArray<Val> vals;
+  int Push(const std::vector<Key>& keys,
+           const std::vector<Val>& vals,
+           const std::vector<int>& val_lens = {},
+           int cmd = 0,
+           const Callback& cb = nullptr) {
+  }
+
 
   /**
-   * \brief optional value lengths
+   * \brief Pulls the values associated with the keys from the server nodes
+   *
+   * This function pulls the values of the keys specified in \a keys from the
+   * server nodes. The data layout is similar to \ref Push.
+   *
+   * Sample usage: the following codes pull the values of keys \a 1 and \a 3
+   * from the server nodes.
+   * \code
+   *   KVWorker<float> w;
+   *   std::vector<Key> keys = {1, 3};
+   *   std::vector<float> vals;
+   *   ps.Pull(keys, &vals);
+   * \endcode
+   *
+   * It's a non-blocking call. The actual pulling is finished,
+   * namely \a vals (and \a val_lens) is filled with pulled values, only
+   * if \ref Wait returns or the callback is called.
+   *
+   * @param keys a list of keys, must be unique and sorted in increasing order
+   * @param vals the buffer for the pulled values. It can be 0 size.
+   * @param val_lens optional buffer for the value length. If set, it can be 0 size.
+   * @param cmd an optional command sent to the servers
+   * @param cb the callback which is called when the pull is finished.
+   * @return the timestamp of this request
    */
+  int Pull(const std::vector<Key>& keys,
+           std::vector<Val>* vals,
+           std::vector<int>* val_lens = nullptr,
+           int cmd = 0,
+           const Callback& cb = nullptr) {
+  }
 
-  SArray<int> val_lens;
 
   /**
-   * \brief the sender identity of this message. it will be assigned
+   * \brief Waits until a push or pull has been finished
+   *
+   * Sample usage:
+   * \code
+   *   int ts = w.Pull(keys, &vals);
+   *   Wait(ts);
+   *   // now vals is ready for use
+   * \endcode
+   *
+   * \param timestamp the timestamp returned by the push or pull
    */
-  int sender;
+  void Wait(int timestamp) {
+
+  }
+
 
   /**
-   * @brief Van sends (receives) packages to (from) a node The current
+   * \brief zero-copy Push
+   *
+   * This function is similar to \ref Push except that all data
+   * will not be copied into system for better performance. It is the caller's
+   * responsibility to keep the content to be not changed before actually
+   * finished.
    */
-  int timestamp;
+  int ZPush(const SArray<Key>& keys,
+           const SArray<Val>& vals,
+           const SArray<int>& val_lens = {},
+           int cmd = 0,
+           const Callback& cb = nullptr) {
+  }
 
+
+  /**
+   * \brief zero-copy Pull
+   *
+   * This function is similar to \ref Pull except that all data
+   * will not be copied into system for better performance. It is the caller's
+   * responsibility to keep the content to be not changed before actually
+   * finished.
+   */
+  int ZPush(const SArray<Key>& keys,
+           const SArray<Val>* vals,
+           const SArray<int>* val_lens = nullptr,
+           int cmd = 0,
+           const Callback& cb = nullptr) {
+  }
+
+ private:
 
 };
+
+/**
+ * \brief the received key-value pairs, with additional info
+ */
+struct RecvKVs {
+  /** \brief the list of keys */
+  SArray<Key> keys;
+  /** \brief the according values */
+  SArray<Key> vals;
+  /** \brief the according value lengths (could be empty) */
+  SArray<Key> val_lens;
+  /** \brief the int cmd */
+  int cmd;
+  /** \brief whether or not this is a push request */
+  bool push;
+  /** \brief sender's node id */
+  int sender;
+  /** \brief the associated timestamp */
+  int timestamp;
+};
+
+/**
+ * \brief A server node for maintaining key-value pairs
+ *
+ */
+template <typename Val>
+class KVServer {
+ public:
+  /**
+   * \brief the handle to process a push/pull request from a worker
+   * \param recved one request received from one worker
+   * \param server this pointer
+   */
+  using ReqHandle = std::function<void(const RecvKVs& recved, KVServer* server)>;
+
+  /**
+   * \brief constructor
+   * \param app_id the app id, should match with \ref KVWorker's id
+   * \param req_handle the handle for processing a request
+   */
+  KVServer(int app_id, const ReqHandle& req_handle) { }
+
+  /**
+   * \brief response to the push/pull request
+   * \param req the request received from the worker
+   * \param res the response that will send back to the worker
+   */
+  void Response(const RecvKVs req, const RecvKVs res = RecvKVs()) {
+
+  }
+ private:
+
+};
+
 
 
   // Message(const Message& msg) : Message() {
@@ -64,174 +243,4 @@ struct KVPairs {
   //   }
   //   value = msg.value;
   // }
-/**
- * \brief Communicate server nodes with key-value pairs
- *
- * This class provides \ref Push and \ref Pull with several variants for worker
- * nodes. See the \ref OnlineServer of server APIs
- *
- * \tparam Val the type of value, which should be primitive types such as
- * int32_t and float
- */
-template<typename Val>
-class KVWorker {
- public:
-  /**
-   * \brief Creates with an unique identity
-   *
-   * A worker node can have multiple \ref KVWorker. They are distinguished with
-   * each other via the identities. Furthermore, it communicates with the
-   * object (such as \ref OnlineServer) on a remote node with the same
-   * identity. If such object does not exist on the receiver node, the system
-   * will produce a fatal message.
-   *
-   * \param app_id the unique identity, negative IDs are preserved by system.
-   */
-  explicit KVWorker(int app_id) {}
-
-  ~KVWorker() { }
-
-  /**
-   * \brief callback function
-   *
-   */
-  using Callaback = std::function<void()>;
-
-  /**
-   * \brief Pushes a list of key-value pairs to all server nodes.
-   *
-   * This function pushes a KV list specified by \a keys and \a vals to all
-   * server nodes. The length of a value,  which is
-   * determined by `k=vals.size()/keys.size()`, can be more than one but should
-   * be a constant. The \a i-th KV pair is
-   *
-   * \verbatim {keys[i], (vals[i*k], ..., vals[(i+1)*k-1])} \endverbatim
-   *
-   * This list may be sliced according to the key ranges server nodes
-   * handling and be pushed to multiple servers
-   *
-   * This function is a non-blocking call, which returns immediately once the
-   * message is queued in the system's sending buffer. The actual pushing is
-   * finished only if \ref Wait returns or the callback specified in \ref
-   * opts is called.
-   *
-   *
-   * Sample usage: the following codes push two KV pairs `{1, (1.1, 1.2)}` and `{3,
-   * (3.1,3.2)}` to server nodes, where the value is a length-2 float vector
-   * \code
-   *   KVWorker<float> w;
-   *   std::vector<Key> keys = {1, 3};
-   *   std::vector<float> vals = {1.1, 1.2, 3.1, 3.2};
-   *   w.Push(keys, vals);
-   * \endcode
-   *
-   * @brief Extends \ref Push to dynamic length values
-   *
-   * This function is similar to \ref Push except that there is additional \a
-   * vals_size where `vals_size[i]` stores the value length of the \a i-th KV
-   * pair. In other words, assume `n = vals_size[0] + .. + vals_size[i-1]`,
-   * then the \a i-th KV pair is presented as
-   *
-   * \verbatim {keys[i], (vals[n], ..., vals[vals_size[i]+n-1])} \endverbatim
-   *
-   * @param keys a list of keys, which must be sorted
-   * @param vals the according values
-   * @param val_lens val_lens[i] stores the value length of the \a i-th KV pair
-   * @param keys a list of keys, which must be sorted
-   * @param vals the according values
-   * @param opts push options
-   * @return the timestamp of this request
-   *
-   * \note Both keys and values will be copied into a system buffer, the
-   * zero-copy version \ref ZPush might be more efficient
-   * \note Use \ref VPush to push dynamic length values
-   */
-  int Push(const std::vector<Key>& keys,
-           const std::vector<Val>& vals,
-           const std::vector<int>& val_lens = {},
-           const Callback& cb = nullptr) {
-  }
-
-
-  /**
-   * \brief Pulls the values associated with the keys from the server nodes
-   *
-   * This function pulls the values of the keys specified in \a keys from the
-   * server nodes.
-   *
-   * It's a non-blocking call, which returns immediately once the message is
-   * queued in the system's sending buffer. The actual pulling is finished,
-   * namely \a vals is filled with pulled values, only
-   * if \ref Wait returns or the callback specified in opts is called.
-   *
-   * Sample usage: the following codes pull the values of keys \a 1 and \a 3
-   * from the server nodes.
-   * \code
-   *   KVWorker<float> w;
-   *   std::vector<Key> keys = {1, 3};
-   *   std::vector<float> vals;
-   *   ps.Pull(keys, &vals);
-   * \endcode
-   *
-   * @brief Extends \ref Push to dynamic length values
-   *
-   * This function is similar to \ref Push except that there is additional \a
-   * vals_size where `vals_size[i]` stores the value length of the \a i-th KV
-   * pair. In other words, assume `n = vals_size[0] + .. + vals_size[i-1]`,
-   * then the \a i-th KV pair is presented as
-   *
-   * \verbatim {keys[i], (vals[n], ..., vals[vals_size[i]+n-1])} \endverbatim
-   *
-   * @param keys a list of keys, which must be sorted
-   * @param vals the according values
-   * @param val_lens val_lens[i] stores the value length of the \a i-th KV pair
-   *
-   * @param keys a list of keys, which must be sorted
-   * @param vals the buffer for the pulled values. It can be empty.
-   * @param opts pull options
-   * @return the timestamp of this request
-   *
-   * \note Both keys and values will be copied into a system buffer, the
-   * zero-copy version \ref ZPull might be more efficient
-   * \note Use \ref VPull to pull dynamic length values
-   */
-  int Pull(const std::vector<Key>& keys,
-           std::vector<Val>* vals,
-           std::vector<int>* val_lens = nullptr,
-           const Callback& cb = nullptr) {
-  }
-
-
-  void Wait(int timestamp) {
-  }
-};
-
-/**
- *
- *
- */
-template <typename Val>
-class KVServer {
- public:
-  KVServer(int app_id, const Handle& handle) { }
-
-  void Response(int node_id, int timestamp,
-                const KVPairs ret = KVPairs()) {
-  }
-
-  /**
-   * \brief handle a push/pull request from a worker node
-   *
-   *
-   * @param push true if this is a push request, false for pull
-   * @param recved the received kv pairs
-   * @param server this pointer
-   */
-  using Handle = std::function<void(bool push,
-                                    const KVParis& recved,
-                                    KVServer<Val>* server)>;
-
-
-};
-
 }  // namespace ps

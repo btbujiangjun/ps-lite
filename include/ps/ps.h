@@ -19,8 +19,7 @@
  * \brief communcating with a list of key-value paris. mainly used for data
  * synchronization.
  */
-
-// #include "ps/kv_app.h"
+#include "ps/kv_app.h"
 
 #include "ps/internal/postoffice.h"
 namespace ps {

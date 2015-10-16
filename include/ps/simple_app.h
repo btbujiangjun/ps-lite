@@ -4,44 +4,47 @@
 namespace ps {
 
 /**
- * \brief a simple app communicating <int, string> pair with others.
+ * \brief a simple app communicating a pair of int (head) and string (body) with others.
  */
 class SimpleApp {
  public:
-
   /**
-   * \brief the received data, either a request or a response
+   * \brief the received data, can be either a request or a response
    */
   struct RecvData {
+    /** \brief the int head */
     int head;
-
+    /** \brief the string body */
     std::string body;
-    /**
-     * \brief whether or not this is a request
-     */
+    /** \brief whether or not this is a request */
     bool request;
-
-    /**
-     * \brief sender id
-     */
+    /** \brief sender's node id */
     int sender;
-
+    /** \brief the associated timestamp */
     int timestamp;
   };
 
   /**
-   * \brief handle a request or a response from a worker node
+   * \brief the handle to proces the received data
    *
-   * @param push true if this is a push request, false for pull
-   * @param recved the received request/response
-   * @param node this pointer
+   * @param recved the received request or response
+   * @param app this pointer
    */
-  using RecvHandle = std::function<void(const RecvData& recved, SimpleApp* node)>;
-  explicit SimpleApp(int app_id, const RecvHandle& recv_handle) :
+  using RecvHandle = std::function<void(const RecvData& recved, SimpleApp* app)>;
+
+  /**
+   * \brief constructor
+   *
+   * @param app_id the app id, should match with the remote node app with which this app
+   * is communicated
+   * @param recv_handle the handle for processing the received data
+   */
+  SimpleApp(int app_id, const RecvHandle& recv_handle) :
       recv_handle_(recv_handle),
-      obj_(app_id, [this](const Message& recv){RunRecvHandle(recv);}) {
+      obj_(app_id, [this](const Message& recv){ RunRecvHandle(recv); }) {
     CHECK(recv_handle_) << "invalid recving handle";
   }
+
   virtual ~SimpleApp() { }
 
   /**
@@ -49,7 +52,7 @@ class SimpleApp {
    *
    * @param req_head request head
    * @param req_body request body
-   * @param node_id remote node id
+   * @param recv_id remote node id
    *
    * @return the timestamp of this request
    */
@@ -76,14 +79,13 @@ class SimpleApp {
    *
    * @param timestamp
    */
-  void Wait(int timestamp) {
-    obj_.WaitRequest(timestamp);
-  }
+  void Wait(int timestamp) { obj_.WaitRequest(timestamp); }
 
 
   /**
    * \brief send back a response for a request
-   *
+   * \param req the request
+   * \param the response body
    */
   void Response(const RecvData& req, const std::string& res_body = "") {
     // setup message
@@ -100,17 +102,22 @@ class SimpleApp {
   }
 
  private:
+  /**
+   * \brief internal handle
+   */
   void RunRecvHandle(const Message& msg) {
     RecvData recv;
-    recv.head = msg.meta.head();
-    recv.body = msg.meta.body();
-    recv.request = msg.meta.request();
+    recv.sender    = msg.sender;
+    recv.head      = msg.meta.head();
+    recv.body      = msg.meta.body();
+    recv.request   = msg.meta.request();
     recv.timestamp = msg.meta.timestamp();
-    recv.sender = msg.sender;
     recv_handle_(recv, this);
   }
 
+  /** \brief data handle */
   RecvHandle recv_handle_;
+  /** \brief ps internal object */
   Customer obj_;
 };
 
