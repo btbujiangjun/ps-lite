@@ -4,7 +4,7 @@
 #include <arpa/inet.h>
 #include <ifaddrs.h>
 #include <netinet/in.h>
-#include "ps/node_info.h"
+#include "ps/base.h"
 #include "ps/sarray.h"
 #include "ps/internal/postoffice.h"
 #include "ps/internal/customer.h"

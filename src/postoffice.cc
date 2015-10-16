@@ -1,6 +1,6 @@
 #include "ps/internal/postoffice.h"
 #include "ps/internal/message.h"
-#include "ps/node_info.h"
+#include "ps/base.h"
 
 namespace ps {
 

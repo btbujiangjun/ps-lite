@@ -3,8 +3,25 @@
  * \brief  The parameter server interface
  */
 #pragma once
-#include <functional>
+
+/**
+ * \brief basic setups and functions in ps
+ */
 #include "ps/base.h"
+
+/**
+ * \brief communicating with a pair of (int, string). mainly used for sending
+ * command
+ */
+#include "ps/simple_app.h"
+
+/**
+ * \brief communcating with a list of key-value paris. mainly used for data
+ * synchronization.
+ */
+
+// #include "ps/kv_app.h"
+
 #include "ps/internal/postoffice.h"
 namespace ps {
 
@@ -18,7 +35,6 @@ void Start(const char* argv0 = nullptr) {
   Postoffice::Get()->Start(argv0);
 }
 
-
 /**
  * \brief terminate the system
  *
@@ -29,9 +45,4 @@ void Finalize() {
   Postoffice::Get()->Finalize();
 }
 
-
 }  // namespace ps
-
-#include "ps/simple_app.h"
-
-#include "ps/node_info.h"
