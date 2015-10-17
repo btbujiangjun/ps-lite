@@ -12,6 +12,7 @@ namespace ps {
 class Customer {
  public:
   using RecvHandle = std::function<void(const Message& recved)>;
+  Customer() { }
   Customer(int id, const RecvHandle& recv_handle);
 
   ~Customer();

@@ -202,6 +202,23 @@ class SArray {
     memcpy(data()+orig_size, arr.data(), arr.size()*sizeof(V));
   }
 
+
+  /**
+   * @brief Slice a segment, zero-copy
+   *
+   * @param begin the start index segment
+   * @param end the end index segment
+   * @return the segment [begin, end)
+   */
+  SArray<V> segment(size_t begin, size_t end) const {
+    CHECK_GE(end, begin); CHECK_LE(end, size());
+    SArray<V> ret;
+    ret.ptr_ = std::shared_ptr<V>(ptr_, data() + begin);
+    ret.size_ = end - begin;
+    ret.capacity_ = end - begin;
+    return ret;
+  }
+
  private:
   size_t size_;
   size_t capacity_;
