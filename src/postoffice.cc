@@ -113,6 +113,17 @@ void Postoffice::Barrier(int node_group) {
     });
 }
 
+const std::vector<Range>& Postoffice::GetServerKeyRanges() {
+  if (server_key_ranges_.empty()) {
+    for (int i = 0; i < num_servers_; ++i) {
+      server_key_ranges_.push_back(Range(
+          kMaxKey / num_servers_ * i,
+          kMaxKey / num_servers_ * (i+1)));
+    }
+  }
+  return server_key_ranges_;
+}
+
 void Postoffice::Manage(const Message& recv) {
   CHECK(recv.meta.has_control());
   const auto& ctrl = recv.meta.control();

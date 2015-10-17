@@ -480,7 +480,7 @@ void Van::Monitoring() {
     }
     uint8_t *data = (uint8_t *)zmq_msg_data (&msg);
     int event = *(uint16_t *)(data);
-    int value = *(uint32_t *)(data + 2);
+    // int value = *(uint32_t *)(data + 2);
 
     // Second frame in message contains event address. it's just the router's
     // address. no help

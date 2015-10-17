@@ -56,9 +56,7 @@ class Postoffice {
    * \brief return the key ranges of all server nodes
    */
 
-  const std::vector<Range>& GetServerKeyRanges() {
-
-  }
+  const std::vector<Range>& GetServerKeyRanges();
 
 
   static inline int WorkerRankToID(int rank) {
@@ -102,6 +100,7 @@ class Postoffice {
 
   std::unordered_map<int, Customer*> customers_;
   std::unordered_map<int, std::vector<int>> node_ids_;
+  std::vector<Range> server_key_ranges_;
 
   bool is_worker_, is_server_, is_scheduler_;
   int num_servers_, num_workers_;
