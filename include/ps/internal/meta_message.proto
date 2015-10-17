@@ -3,7 +3,6 @@ import "ps/internal/node.proto";
 
 // mete information about a message
 message MetaMessage {
-
   // message.head
   optional int32 head = 1;
 
@@ -17,18 +16,14 @@ message MetaMessage {
   // false: the response task to the request task with the same *time*
   optional bool request = 4 [default = false];
 
-
   // the unique id of an customer
   optional int32 customer_id = 5;
 
   // the timestamp of this message
   optional int32 timestamp = 6;
 
-  // true: the message sent with this task will contain a list of keys
-  optional bool with_key = 7 [default = false];
-
-  // data type of message.value[i]
-  repeated int32 value_type = 8 [packed=true];
+  // data type of message.data[i]
+  repeated int32 data_type = 8 [packed=true];
 
   // whether or not a push message
   optional bool push = 9;

@@ -163,24 +163,17 @@ class MetaMessage : public ::google::protobuf::Message {
   inline ::google::protobuf::int32 timestamp() const;
   inline void set_timestamp(::google::protobuf::int32 value);
 
-  // optional bool with_key = 7 [default = false];
-  inline bool has_with_key() const;
-  inline void clear_with_key();
-  static const int kWithKeyFieldNumber = 7;
-  inline bool with_key() const;
-  inline void set_with_key(bool value);
-
-  // repeated int32 value_type = 8 [packed = true];
-  inline int value_type_size() const;
-  inline void clear_value_type();
-  static const int kValueTypeFieldNumber = 8;
-  inline ::google::protobuf::int32 value_type(int index) const;
-  inline void set_value_type(int index, ::google::protobuf::int32 value);
-  inline void add_value_type(::google::protobuf::int32 value);
+  // repeated int32 data_type = 8 [packed = true];
+  inline int data_type_size() const;
+  inline void clear_data_type();
+  static const int kDataTypeFieldNumber = 8;
+  inline ::google::protobuf::int32 data_type(int index) const;
+  inline void set_data_type(int index, ::google::protobuf::int32 value);
+  inline void add_data_type(::google::protobuf::int32 value);
   inline const ::google::protobuf::RepeatedField< ::google::protobuf::int32 >&
-      value_type() const;
+      data_type() const;
   inline ::google::protobuf::RepeatedField< ::google::protobuf::int32 >*
-      mutable_value_type();
+      mutable_data_type();
 
   // optional bool push = 9;
   inline bool has_push() const;
@@ -203,8 +196,6 @@ class MetaMessage : public ::google::protobuf::Message {
   inline void clear_has_customer_id();
   inline void set_has_timestamp();
   inline void clear_has_timestamp();
-  inline void set_has_with_key();
-  inline void clear_has_with_key();
   inline void set_has_push();
   inline void clear_has_push();
 
@@ -216,13 +207,12 @@ class MetaMessage : public ::google::protobuf::Message {
   ::google::protobuf::int32 customer_id_;
   ::google::protobuf::int32 timestamp_;
   bool request_;
-  bool with_key_;
   bool push_;
-  ::google::protobuf::RepeatedField< ::google::protobuf::int32 > value_type_;
-  mutable int _value_type_cached_byte_size_;
+  ::google::protobuf::RepeatedField< ::google::protobuf::int32 > data_type_;
+  mutable int _data_type_cached_byte_size_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(9 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(8 + 31) / 32];
 
   friend void  protobuf_AddDesc_ps_2finternal_2fmeta_5fmessage_2eproto();
   friend void protobuf_AssignDesc_ps_2finternal_2fmeta_5fmessage_2eproto();
@@ -564,62 +554,40 @@ inline void MetaMessage::set_timestamp(::google::protobuf::int32 value) {
   timestamp_ = value;
 }
 
-// optional bool with_key = 7 [default = false];
-inline bool MetaMessage::has_with_key() const {
-  return (_has_bits_[0] & 0x00000040u) != 0;
+// repeated int32 data_type = 8 [packed = true];
+inline int MetaMessage::data_type_size() const {
+  return data_type_.size();
 }
-inline void MetaMessage::set_has_with_key() {
-  _has_bits_[0] |= 0x00000040u;
+inline void MetaMessage::clear_data_type() {
+  data_type_.Clear();
 }
-inline void MetaMessage::clear_has_with_key() {
-  _has_bits_[0] &= ~0x00000040u;
+inline ::google::protobuf::int32 MetaMessage::data_type(int index) const {
+  return data_type_.Get(index);
 }
-inline void MetaMessage::clear_with_key() {
-  with_key_ = false;
-  clear_has_with_key();
+inline void MetaMessage::set_data_type(int index, ::google::protobuf::int32 value) {
+  data_type_.Set(index, value);
 }
-inline bool MetaMessage::with_key() const {
-  return with_key_;
-}
-inline void MetaMessage::set_with_key(bool value) {
-  set_has_with_key();
-  with_key_ = value;
-}
-
-// repeated int32 value_type = 8 [packed = true];
-inline int MetaMessage::value_type_size() const {
-  return value_type_.size();
-}
-inline void MetaMessage::clear_value_type() {
-  value_type_.Clear();
-}
-inline ::google::protobuf::int32 MetaMessage::value_type(int index) const {
-  return value_type_.Get(index);
-}
-inline void MetaMessage::set_value_type(int index, ::google::protobuf::int32 value) {
-  value_type_.Set(index, value);
-}
-inline void MetaMessage::add_value_type(::google::protobuf::int32 value) {
-  value_type_.Add(value);
+inline void MetaMessage::add_data_type(::google::protobuf::int32 value) {
+  data_type_.Add(value);
 }
 inline const ::google::protobuf::RepeatedField< ::google::protobuf::int32 >&
-MetaMessage::value_type() const {
-  return value_type_;
+MetaMessage::data_type() const {
+  return data_type_;
 }
 inline ::google::protobuf::RepeatedField< ::google::protobuf::int32 >*
-MetaMessage::mutable_value_type() {
-  return &value_type_;
+MetaMessage::mutable_data_type() {
+  return &data_type_;
 }
 
 // optional bool push = 9;
 inline bool MetaMessage::has_push() const {
-  return (_has_bits_[0] & 0x00000100u) != 0;
+  return (_has_bits_[0] & 0x00000080u) != 0;
 }
 inline void MetaMessage::set_has_push() {
-  _has_bits_[0] |= 0x00000100u;
+  _has_bits_[0] |= 0x00000080u;
 }
 inline void MetaMessage::clear_has_push() {
-  _has_bits_[0] &= ~0x00000100u;
+  _has_bits_[0] &= ~0x00000080u;
 }
 inline void MetaMessage::clear_push() {
   push_ = false;

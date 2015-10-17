@@ -256,7 +256,6 @@ void FreeData(void *data, void *hint) {
   }
 }
 
-
 int Van::Send_(const Message& msg) {
   std::lock_guard<std::mutex> lk(mu_);
 
@@ -269,11 +268,6 @@ int Van::Send_(const Message& msg) {
   }
   void *socket = it->second;
 
-  // double check
-  bool has_key = !msg.key.empty();
-  CHECK_EQ(has_key, msg.meta.with_key());
-  int n = has_key + msg.value.size();
-
   // send meta
   int meta_size = msg.meta.ByteSize();
   char* meta_buf = new char[meta_size+5];
@@ -281,6 +275,7 @@ int Van::Send_(const Message& msg) {
       << "failed to serialize " << msg.meta.ShortDebugString();
 
   int tag = ZMQ_SNDMORE;
+  int n = msg.data.size();
   if (n == 0) tag = 0;
   zmq_msg_t meta_msg;
   zmq_msg_init_data(&meta_msg, meta_buf, meta_size, FreeData, NULL);
@@ -292,15 +287,12 @@ int Van::Send_(const Message& msg) {
                  << "] errno: " << errno << " " << zmq_strerror(errno);
     return -1;
   }
-  size_t send_bytes = meta_size;
+  int send_bytes = meta_size;
 
   // send data
   for (int i = 0; i < n; ++i) {
-    SArray<char>* data =
-        (has_key && i == 0) ?
-        (new SArray<char>(msg.key)) :
-        (new SArray<char>(msg.value[i-has_key]));
     zmq_msg_t data_msg;
+    SArray<char>* data = new SArray<char>(msg.data[i]);
     int data_size = data->size();
     zmq_msg_init_data(&data_msg, data->data(), data->size(), FreeData, data);
     if (i == n - 1) tag = 0;
@@ -314,7 +306,6 @@ int Van::Send_(const Message& msg) {
     }
     send_bytes += data_size;
   }
-
   send_bytes_ += send_bytes;
   return send_bytes;
 }
@@ -336,7 +327,7 @@ int Van::GetNodeID(const char* buf, size_t size) {
 }
 
 int Van::Recv(Message* msg) {
-  msg->value.clear();
+  msg->data.clear();
   size_t recv_bytes = 0;
   for (int i = 0; ; ++i) {
     zmq_msg_t* zmsg = new zmq_msg_t;
@@ -374,16 +365,10 @@ int Van::Recv(Message* msg) {
           zmq_msg_close(zmsg);
           delete zmsg;
         });
-
-      if (i == 2 && msg->meta.with_key()) {
-        msg->key = data;
-      } else {
-        msg->value.push_back(data);
-      }
+      msg->data.push_back(data);
       if (!zmq_msg_more(zmsg)) { break; }
     }
   }
-
   recv_bytes_ += recv_bytes;
   return recv_bytes;
 }
