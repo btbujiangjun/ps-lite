@@ -3,6 +3,14 @@
 #include "ps/base.h"
 
 namespace ps {
+Postoffice::Postoffice() : van_(new Van()) {
+  num_workers_ = atoi(CHECK_NOTNULL(getenv("DMLC_NUM_WORKER")));
+  num_servers_ = atoi(CHECK_NOTNULL(getenv("DMLC_NUM_SERVER")));
+  std::string role(CHECK_NOTNULL(getenv("DMLC_ROLE")));
+  is_worker_ = role == "worker";
+  is_server_ = role == "server";
+  is_scheduler_ = role == "scheduler";
+}
 
 void Postoffice::Start(const char* argv0) {
   // init glog
@@ -13,7 +21,7 @@ void Postoffice::Start(const char* argv0) {
   }
 
   // init node info.
-  for (int i = 0; i < NumWorkers(); ++i) {
+  for (int i = 0; i < num_workers_; ++i) {
     int id = WorkerRankToID(i);
     for (int g : {id, kWorkerGroup, kWorkerGroup + kServerGroup,
             kWorkerGroup + kScheduler,
@@ -22,7 +30,7 @@ void Postoffice::Start(const char* argv0) {
     }
   }
 
-  for (int i = 0; i < NumServers(); ++i) {
+  for (int i = 0; i < num_servers_; ++i) {
     int id = ServerRankToID(i);
     for (int g : {id, kServerGroup, kWorkerGroup + kServerGroup,
             kServerGroup + kScheduler,

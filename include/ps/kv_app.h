@@ -467,7 +467,7 @@ void KVWorker<Val>::RecvHandle(const Message& msg) {
   }
 
   // finished, run callbacks
-  if (obj_->NumResponse(ts) == NumServers() - 1)  {
+  if (obj_->NumResponse(ts) == Postoffice::Get()->num_servers() - 1)  {
     mu_.lock();
     auto it = callbacks_.find(ts);
     if (it != callbacks_.end()) {

@@ -114,14 +114,14 @@ void Van::Start() {
   scheduler_.set_port(atoi(CHECK_NOTNULL(getenv("DMLC_PS_ROOT_PORT"))));
   scheduler_.set_role(Node::SCHEDULER);
   scheduler_.set_id(kScheduler);
-  is_scheduler_ = MyNode::IsScheduler();
+  is_scheduler_ = Postoffice::Get()->is_scheduler();
 
   // get my node info
   if (is_scheduler_) {
     my_node_ = scheduler_;
   } else {
-    auto role = MyNode::IsWorker() ? Node::WORKER : (
-        MyNode::IsServer() ? Node::SERVER : Node::SCHEDULER);
+    auto role = is_scheduler_ ? Node::SCHEDULER :
+                (Postoffice::Get()->is_worker() ? Node::WORKER : Node::SERVER);
     std::string interface;
     const char*  itf = getenv("DMLC_INTERFACE");
     if (itf) interface = std::string(itf);
@@ -418,8 +418,8 @@ void Van::Receiving() {
           Connect(node);
         }
 
-        if (num_servers_ == NumServers() &&
-            num_workers_ == NumWorkers()) {
+        if (num_servers_ == Postoffice::Get()->num_servers() &&
+            num_workers_ == Postoffice::Get()->num_workers()) {
           if (is_scheduler_) {
             nodes.mutable_control()->add_node()->CopyFrom(my_node_);
             nodes.mutable_control()->set_cmd(Control::ADD_NODE);

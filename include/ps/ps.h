@@ -21,8 +21,25 @@
  */
 #include "ps/kv_app.h"
 
-#include "ps/internal/postoffice.h"
 namespace ps {
+
+/** \brief Returns the number of worker nodes */
+int NumWorkers() { return Postoffice::Get()->num_workers(); }
+
+/** \brief Returns the number of server nodes */
+int NumServers() { return Postoffice::Get()->num_servers(); }
+
+/** \brief Returns the rank of this node in its group */
+int Rank() { return Postoffice::Get()->rank(); }
+
+/** \brief Returns true if this node is a worker node */
+bool IsWorker() { return Postoffice::Get()->is_worker(); }
+
+/** \brief Returns true if this node is a server node. */
+bool IsServer() { return Postoffice::Get()->is_server(); }
+
+/** \brief Returns true if this node is a scheduler node. */
+bool IsScheduler() { return Postoffice::Get()->is_scheduler(); }
 
 /**
  * \brief start the system

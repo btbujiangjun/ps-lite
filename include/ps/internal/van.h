@@ -47,15 +47,15 @@ class Van {
     return Send_(msg);
   }
 
-/**
- * \brief return my node
- *
- */
-
-const Node& my_node() const {
+  /**
+   * \brief return my node
+   */
+  const Node& my_node() const {
     CHECK(ready_) << "call Start() first";
-return my_node_;
-}
+    return my_node_;
+  }
+
+
   /**
    * \brief stop van
    *

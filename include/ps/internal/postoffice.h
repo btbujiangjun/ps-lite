@@ -56,12 +56,10 @@ class Postoffice {
    * \brief return the key ranges of all server nodes
    */
 
-  const std::vector<Range>& GetServerKeyRanges();
+  const std::vector<Range>& GetServerKeyRanges() {
 
-  // /**
-  //  * \brief get the key ranges of a node (group)
-  //  */
-  // const std::vector<Range>& GetKeyRanges(int node_id);
+  }
+
 
   static inline int WorkerRankToID(int rank) {
     return rank * 2 + 9;
@@ -72,19 +70,32 @@ class Postoffice {
   }
 
   static inline int IDtoRank(int id) {
-    return (id - 8) / 2;
+    return std::max((id - 8) / 2, 0);
   }
 
-  void Barrier(int node_group);
+
+  int num_workers() const { return num_workers_; }
+
+  int num_servers() const { return num_servers_; }
+
+  int rank() const { return IDtoRank(van_->my_node().id()); }
+
+  int is_worker() const { return is_worker_; }
+
+  int is_server() const { return is_server_; }
+
+  int is_scheduler() const { return is_scheduler_; }
+
+
+  void Barrier(int node_id);
+
 
 
   void Manage(const Message& recv);
 
  private:
-  Postoffice() : van_(new Van()) { }
-  ~Postoffice() {
-    delete van_;
-  }
+  Postoffice();
+  ~Postoffice() { delete van_; }
   Van* van_;
   mutable std::mutex mu_;
   DISALLOW_COPY_AND_ASSIGN(Postoffice);
@@ -92,6 +103,8 @@ class Postoffice {
   std::unordered_map<int, Customer*> customers_;
   std::unordered_map<int, std::vector<int>> node_ids_;
 
+  bool is_worker_, is_server_, is_scheduler_;
+  int num_servers_, num_workers_;
 
   bool barrier_done_;
   std::mutex barrier_mu_;
