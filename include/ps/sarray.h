@@ -1,7 +1,8 @@
 #pragma once
+#include <memory>
+#include <sstream>
 #include "ps/internal/utils.h"
 #include "ps/range.h"
-#include <memory>
 namespace ps {
 
 /**
@@ -83,7 +84,7 @@ class SArray {
    */
   void CopyFrom(const V* data, size_t size) {
     resize(size);
-    memcpy(data(), data, size*sizeof(V));
+    memcpy(this->data(), data, size*sizeof(V));
   }
 
   /**
@@ -252,13 +253,28 @@ Range FindRange(const SArray<V>& arr, V lower, V upper) {
 }
 
 
+/*! \brief returns a short debug string */
+template <typename V>
+inline std::string DebugStr(const V* data, int n, int m = 5) {
+  std::stringstream ss;
+  ss << "[" << n << "]: ";
+  if (n < 2 * m) {
+    for (int i = 0; i < n; ++i) ss << data[i] << " ";
+  } else {
+    for (int i = 0; i < m; ++i) ss << data[i] << " ";
+    ss << "... ";
+    for (int i = n-m; i < n; ++i) ss << data[i] << " ";
+  }
+  return ss.str();
+}
+
 /**
  * \brief print a debug string
  */
-// template <typename V>
-// std::ostream& operator<<(std::ostream& os, const SArray<V>& obj) {
-  // os << obj.blob();
-  // return os;
-// }
+template <typename V>
+std::ostream& operator<<(std::ostream& os, const SArray<V>& obj) {
+  os << DebugStr(obj.data(), obj.size());
+  return os;
+}
 
 }  // namespace ps

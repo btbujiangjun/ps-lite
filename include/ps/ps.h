@@ -61,4 +61,11 @@ void Finalize() {
   Postoffice::Get()->Finalize();
 }
 
+/**
+ * \brief Register a callback function to the system which is called after Finalize
+ */
+void RegisterExitCallback(const std::function<void()>& cb) {
+  Postoffice::Get()->RegisterExitCallback(cb);
+}
+
 }  // namespace ps

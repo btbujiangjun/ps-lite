@@ -55,9 +55,13 @@ class Postoffice {
   /**
    * \brief return the key ranges of all server nodes
    */
-
   const std::vector<Range>& GetServerKeyRanges();
 
+  using Callback = std::function<void()>;
+
+  void RegisterExitCallback(const Callback& cb) {
+    exit_callback_ = cb;
+  }
 
   static inline int WorkerRankToID(int rank) {
     return rank * 2 + 9;
@@ -109,5 +113,6 @@ class Postoffice {
   std::mutex barrier_mu_;
   std::condition_variable barrier_cond_;
 
+  Callback exit_callback_;
 };
 }  // namespace ps

@@ -59,7 +59,7 @@ struct Message {
    */
   template <typename V>
   void AddData(const SArray<V>& val) {
-    CHECK_EQ(data.size(), meta.data_type_size());
+    CHECK_EQ(data.size(), (size_t)meta.data_type_size());
     meta.add_data_type(GetDataType<V>());
     data.push_back(SArray<char>(val));
   }

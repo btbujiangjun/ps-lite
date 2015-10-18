@@ -435,11 +435,12 @@ void KVWorker<Val>::Send(int timestamp, bool push, int cmd, const KVPairs<Val>& 
     msg.meta.set_push(push);
     msg.meta.set_head(cmd);
     msg.meta.set_timestamp(timestamp);
-    if (s.keys.size()) {
-      msg.AddData(s.keys);
-      msg.AddData(s.vals);
-      if (s.lens.size()) {
-        msg.AddData(s.lens);
+    const auto& kvs = s.second;
+    if (kvs.keys.size()) {
+      msg.AddData(kvs.keys);
+      msg.AddData(kvs.vals);
+      if (kvs.lens.size()) {
+        msg.AddData(kvs.lens);
       }
     }
     msg.recver = i;

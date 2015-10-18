@@ -1,5 +1,4 @@
 #pragma once
-
 #include "glog/logging.h"
 
 namespace ps {
@@ -38,5 +37,6 @@ inline V GetEnv(const char *key, V default_val) {
   TypeName(const TypeName&);               \
   void operator=(const TypeName&)
 #endif
+
 
 }  // namespace ps
