@@ -1,5 +1,5 @@
 #include "ps/base.h"
-#include "ps/internal/customer.h"
+#include "ps/simple_app.h"
 namespace ps {
 
 /**
@@ -41,25 +41,10 @@ struct KVPairs {
  * int32_t and float
  */
 template<typename Val>
-class KVWorker {
+class KVWorker : public SimpleApp {
  public:
-  /**
-   * \brief constructor
-   *
-   * \param app_id the app id, should match with \ref KVServer's id
-   */
-  explicit KVWorker(int app_id) {
-    using namespace std::placeholders;
-    slicer_ = std::bind(&KVWorker<Val>::DefaultSlicer, this, _1, _2, _3);
-    obj_ = new Customer(
-        app_id, std::bind(&KVWorker<Val>::RecvHandle, this, _1));
-  }
-
-  /** \brief deconstructor */
-  ~KVWorker() {
-    delete obj_;
-  }
-
+  /** avoid too many this-> */
+  using SimpleApp::obj_;
   /**
    * \brief callback function for \ref Push and \ref Pull
    *
@@ -68,6 +53,20 @@ class KVWorker {
    * servers' data structure or the kv pairs have already pulled back.
    */
   using Callback = std::function<void()>;
+
+  /**
+   * \brief constructor
+   *
+   * \param app_id the app id, should match with \ref KVServer's id
+   */
+  explicit KVWorker(int app_id) : SimpleApp() {
+    using namespace std::placeholders;
+    slicer_ = std::bind(&KVWorker<Val>::DefaultSlicer, this, _1, _2, _3);
+    obj_ = new Customer(app_id, std::bind(&KVWorker<Val>::Process, this, _1));
+  }
+
+  /** \brief deconstructor */
+  virtual ~KVWorker() { delete obj_; obj_ = nullptr; }
 
   /**
    * \brief Pushes a list of key-value pairs to all server nodes.
@@ -222,7 +221,6 @@ class KVWorker {
   template <typename C, typename D>
   int Pull_(const SArray<Key>& keys, C* vals, D* lens,
             int cmd, const Callback& cb);
-
   /**
    * \brief add a callback for a request. threadsafe.
    * @param cb callback
@@ -233,7 +231,6 @@ class KVWorker {
     std::lock_guard<std::mutex> lk(mu_);
     callbacks_[timestamp] = cb;
   }
-
   /**
    * \brief send the kv list to all servers
    * @param timestamp the timestamp of the request
@@ -241,10 +238,9 @@ class KVWorker {
    * @param cmd command
    */
   void Send(int timestamp, bool push, int cmd, const KVPairs<Val>& kvs);
-
   /** \brief internal receive handle */
-  void RecvHandle(const Message& msg);
-
+  void Process(const Message& msg);
+  /** \brief default kv slicer */
   void DefaultSlicer(const KVPairs<Val>& send,
                      const std::vector<Range>& ranges,
                      SlicedKVs* sliced);
@@ -257,27 +253,37 @@ class KVWorker {
   std::mutex mu_;
   /** \brief kv list slicer */
   Slicer slicer_;
-  /** \brief ps internal object */
-  Customer* obj_;
+};
+
+/** \brief meta information about a kv request */
+struct KVMeta {
+  /** \brief the int cmd */
+  int cmd;
+  /** \brief whether or not this is a push request */
+  bool push;
+  /** \brief sender's node id */
+  int sender;
+  /** \brief the associated timestamp */
+  int timestamp;
 };
 
 /**
  * \brief A server node for maintaining key-value pairs
  */
 template <typename Val>
-class KVServer {
+class KVServer : public SimpleApp {
  public:
-  /** \brief meta information about the request */
-  struct ReqMeta {
-    /** \brief the int cmd */
-    int cmd;
-    /** \brief whether or not this is a push request */
-    bool push;
-    /** \brief sender's node id */
-    int sender;
-    /** \brief the associated timestamp */
-    int timestamp;
-  };
+  /**
+   * \brief constructor
+   * \param app_id the app id, should match with \ref KVWorker's id
+   */
+  KVServer(int app_id) : SimpleApp() {
+    using namespace std::placeholders;
+    obj_ = new Customer(app_id, std::bind(&KVServer<Val>::Process, this, _1));
+  }
+
+  /** \brief deconstructor */
+  virtual ~KVServer() { delete obj_; obj_ = nullptr; }
 
   /**
    * \brief the handle to process a push/pull request from a worker
@@ -285,47 +291,38 @@ class KVServer {
    * \param req_data kv pairs of this request
    * \param server this pointer
    */
-  using ReqHandle = std::function<void(const ReqMeta& req_meta,
+  using ReqHandle = std::function<void(const KVMeta& req_meta,
                                        const KVPairs<Val>& req_data,
                                        KVServer* server)>;
-  /**
-   * \brief constructor
-   * \param app_id the app id, should match with \ref KVWorker's id
-   * \param req_handle the handle for processing a request
-   */
-  KVServer(int app_id, const ReqHandle& req_handle) :
-      req_handle_(req_handle) {
-    CHECK(req_handle_) << "invalid request handle";
-    using namespace std::placeholders;
-    obj_ = new Customer(app_id, std::bind(&KVServer<Val>::RecvHandle, this, _1));
+  void set_request_handle(const ReqHandle& request_handle) {
+    CHECK(request_handle) << "invalid request handle";
+    request_handle_ = request_handle;
   }
-
-  /** \brief deconstructor */
-  ~KVServer() { delete obj_; }
 
   /**
    * \brief response to the push/pull request
    * \param req the meta-info of the request
    * \param res the kv pairs that will send back to the worker
    */
-  void Response(const ReqMeta& req, const KVPairs<Val>& res = KVPairs<Val>());
+  void Response(const KVMeta& req, const KVPairs<Val>& res = KVPairs<Val>());
 
  private:
   /** \brief internal receive handle */
-  void RecvHandle(const Message& msg);
-
+  void Process(const Message& msg);
   /** \brief request handle */
-  ReqHandle req_handle_;
-  /** \brief ps internal object */
-  Customer* obj_;
+  ReqHandle request_handle_;
 };
 
 
 ///////////////////////////////////////////////////////////////////////////////
 
 template <typename Val>
-void KVServer<Val>::RecvHandle(const Message& msg) {
-  ReqMeta meta;
+void KVServer<Val>::Process(const Message& msg) {
+  if (msg.meta.simple_app()) {
+    SimpleApp::Process(msg); return;
+  }
+
+  KVMeta meta;
   meta.cmd = msg.meta.head();
   meta.push = msg.meta.push();
   meta.sender = msg.sender;
@@ -342,11 +339,12 @@ void KVServer<Val>::RecvHandle(const Message& msg) {
       CHECK_EQ(data.lens.size(), data.keys.size());
     }
   }
-  req_handle_(meta, data, this);
+  CHECK(request_handle_);
+  request_handle_(meta, data, this);
 }
 
 template <typename Val>
-void KVServer<Val>::Response(const ReqMeta& req, const KVPairs<Val>& res) {
+void KVServer<Val>::Response(const KVMeta& req, const KVPairs<Val>& res) {
   Message msg;
   msg.meta.set_customer_id(obj_->id());
   msg.meta.set_request(false);
@@ -451,7 +449,11 @@ void KVWorker<Val>::Send(int timestamp, bool push, int cmd, const KVPairs<Val>& 
 
 
 template <typename Val>
-void KVWorker<Val>::RecvHandle(const Message& msg) {
+void KVWorker<Val>::Process(const Message& msg) {
+  if (msg.meta.simple_app()) {
+    SimpleApp::Process(msg); return;
+  }
+
   // store the data for pulling
   int ts = msg.meta.timestamp();
   if (!msg.meta.push() && msg.data.size()) {

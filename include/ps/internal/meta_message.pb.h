@@ -182,6 +182,13 @@ class MetaMessage : public ::google::protobuf::Message {
   inline bool push() const;
   inline void set_push(bool value);
 
+  // optional bool simple_app = 10;
+  inline bool has_simple_app() const;
+  inline void clear_simple_app();
+  static const int kSimpleAppFieldNumber = 10;
+  inline bool simple_app() const;
+  inline void set_simple_app(bool value);
+
   // @@protoc_insertion_point(class_scope:ps.MetaMessage)
  private:
   inline void set_has_head();
@@ -198,6 +205,8 @@ class MetaMessage : public ::google::protobuf::Message {
   inline void clear_has_timestamp();
   inline void set_has_push();
   inline void clear_has_push();
+  inline void set_has_simple_app();
+  inline void clear_has_simple_app();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
@@ -208,11 +217,12 @@ class MetaMessage : public ::google::protobuf::Message {
   ::google::protobuf::int32 timestamp_;
   bool request_;
   bool push_;
+  bool simple_app_;
   ::google::protobuf::RepeatedField< ::google::protobuf::int32 > data_type_;
   mutable int _data_type_cached_byte_size_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(8 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(9 + 31) / 32];
 
   friend void  protobuf_AddDesc_ps_2finternal_2fmeta_5fmessage_2eproto();
   friend void protobuf_AssignDesc_ps_2finternal_2fmeta_5fmessage_2eproto();
@@ -599,6 +609,28 @@ inline bool MetaMessage::push() const {
 inline void MetaMessage::set_push(bool value) {
   set_has_push();
   push_ = value;
+}
+
+// optional bool simple_app = 10;
+inline bool MetaMessage::has_simple_app() const {
+  return (_has_bits_[0] & 0x00000100u) != 0;
+}
+inline void MetaMessage::set_has_simple_app() {
+  _has_bits_[0] |= 0x00000100u;
+}
+inline void MetaMessage::clear_has_simple_app() {
+  _has_bits_[0] &= ~0x00000100u;
+}
+inline void MetaMessage::clear_simple_app() {
+  simple_app_ = false;
+  clear_has_simple_app();
+}
+inline bool MetaMessage::simple_app() const {
+  return simple_app_;
+}
+inline void MetaMessage::set_simple_app(bool value) {
+  set_has_simple_app();
+  simple_app_ = value;
 }
 
 // -------------------------------------------------------------------

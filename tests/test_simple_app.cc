@@ -3,20 +3,19 @@ using namespace ps;
 
 int num = 0;
 
-void Handle(const SimpleApp::RecvData& data, SimpleApp* app) {
-  if (data.request) {
-    CHECK_EQ(data.head, 1);
-    CHECK_EQ(data.body, "test");
-    app->Response(data);
-    ++ num;
-  }
+void ReqHandle(const SimpleData& req, SimpleApp* app) {
+  CHECK_EQ(req.head, 1);
+  CHECK_EQ(req.body, "test");
+  app->Response(req);
+  ++ num;
 }
 
 int main(int argc, char *argv[]) {
   int n = 100;
-  Start();
-  SimpleApp app(0, Handle);
+  SimpleApp app(0);
+  app.set_request_handle(ReqHandle);
 
+  Start();
   if (IsScheduler()) {
     std::vector<int> ts;
     for (int i = 0; i < n; ++i) {
