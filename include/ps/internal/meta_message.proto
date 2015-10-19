@@ -24,6 +24,7 @@ message MetaMessage {
   optional bool simple_app = 10;
 }
 
+// system control info
 message Control {
   enum Command {
     TERMINATE = 1;

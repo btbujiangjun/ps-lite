@@ -104,7 +104,6 @@ class SimpleApp {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// implementation
 
 SimpleApp::SimpleApp(int app_id) {
   using namespace std::placeholders;

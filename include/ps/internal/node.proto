@@ -1,17 +1,18 @@
 package ps;
+
+// a node
 message Node {
   enum Role {
     SERVER = 0;
     WORKER = 1;
-    SCHEDULER = 3;  // each running application has a single scheduler
-    GROUP = 4;      // a virtual node, present a group of node
-    UNUSED = 5;     // a backup node, could turn into another node
+    SCHEDULER = 3;
   }
+  // the node role
   required Role role = 1;
+  // node id
   optional int32 id = 2;
+  // hostname or ip
   optional string hostname = 3;
+  // the port this node is binding
   optional int32 port = 4;
-
-  optional uint64 key_begin = 5;
-  optional uint64 key_end = 6;
 }

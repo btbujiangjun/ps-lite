@@ -39,13 +39,11 @@ class Node;
 enum Node_Role {
   Node_Role_SERVER = 0,
   Node_Role_WORKER = 1,
-  Node_Role_SCHEDULER = 3,
-  Node_Role_GROUP = 4,
-  Node_Role_UNUSED = 5
+  Node_Role_SCHEDULER = 3
 };
 bool Node_Role_IsValid(int value);
 const Node_Role Node_Role_Role_MIN = Node_Role_SERVER;
-const Node_Role Node_Role_Role_MAX = Node_Role_UNUSED;
+const Node_Role Node_Role_Role_MAX = Node_Role_SCHEDULER;
 const int Node_Role_Role_ARRAYSIZE = Node_Role_Role_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* Node_Role_descriptor();
@@ -116,8 +114,6 @@ class Node : public ::google::protobuf::Message {
   static const Role SERVER = Node_Role_SERVER;
   static const Role WORKER = Node_Role_WORKER;
   static const Role SCHEDULER = Node_Role_SCHEDULER;
-  static const Role GROUP = Node_Role_GROUP;
-  static const Role UNUSED = Node_Role_UNUSED;
   static inline bool Role_IsValid(int value) {
     return Node_Role_IsValid(value);
   }
@@ -174,20 +170,6 @@ class Node : public ::google::protobuf::Message {
   inline ::google::protobuf::int32 port() const;
   inline void set_port(::google::protobuf::int32 value);
 
-  // optional uint64 key_begin = 5;
-  inline bool has_key_begin() const;
-  inline void clear_key_begin();
-  static const int kKeyBeginFieldNumber = 5;
-  inline ::google::protobuf::uint64 key_begin() const;
-  inline void set_key_begin(::google::protobuf::uint64 value);
-
-  // optional uint64 key_end = 6;
-  inline bool has_key_end() const;
-  inline void clear_key_end();
-  static const int kKeyEndFieldNumber = 6;
-  inline ::google::protobuf::uint64 key_end() const;
-  inline void set_key_end(::google::protobuf::uint64 value);
-
   // @@protoc_insertion_point(class_scope:ps.Node)
  private:
   inline void set_has_role();
@@ -198,22 +180,16 @@ class Node : public ::google::protobuf::Message {
   inline void clear_has_hostname();
   inline void set_has_port();
   inline void clear_has_port();
-  inline void set_has_key_begin();
-  inline void clear_has_key_begin();
-  inline void set_has_key_end();
-  inline void clear_has_key_end();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   int role_;
   ::google::protobuf::int32 id_;
   ::std::string* hostname_;
-  ::google::protobuf::uint64 key_begin_;
-  ::google::protobuf::uint64 key_end_;
   ::google::protobuf::int32 port_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(6 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
 
   friend void  protobuf_AddDesc_ps_2finternal_2fnode_2eproto();
   friend void protobuf_AssignDesc_ps_2finternal_2fnode_2eproto();
@@ -364,50 +340,6 @@ inline ::google::protobuf::int32 Node::port() const {
 inline void Node::set_port(::google::protobuf::int32 value) {
   set_has_port();
   port_ = value;
-}
-
-// optional uint64 key_begin = 5;
-inline bool Node::has_key_begin() const {
-  return (_has_bits_[0] & 0x00000010u) != 0;
-}
-inline void Node::set_has_key_begin() {
-  _has_bits_[0] |= 0x00000010u;
-}
-inline void Node::clear_has_key_begin() {
-  _has_bits_[0] &= ~0x00000010u;
-}
-inline void Node::clear_key_begin() {
-  key_begin_ = GOOGLE_ULONGLONG(0);
-  clear_has_key_begin();
-}
-inline ::google::protobuf::uint64 Node::key_begin() const {
-  return key_begin_;
-}
-inline void Node::set_key_begin(::google::protobuf::uint64 value) {
-  set_has_key_begin();
-  key_begin_ = value;
-}
-
-// optional uint64 key_end = 6;
-inline bool Node::has_key_end() const {
-  return (_has_bits_[0] & 0x00000020u) != 0;
-}
-inline void Node::set_has_key_end() {
-  _has_bits_[0] |= 0x00000020u;
-}
-inline void Node::clear_has_key_end() {
-  _has_bits_[0] &= ~0x00000020u;
-}
-inline void Node::clear_key_end() {
-  key_end_ = GOOGLE_ULONGLONG(0);
-  clear_has_key_end();
-}
-inline ::google::protobuf::uint64 Node::key_end() const {
-  return key_end_;
-}
-inline void Node::set_key_end(::google::protobuf::uint64 value) {
-  set_has_key_end();
-  key_end_ = value;
 }
 
 

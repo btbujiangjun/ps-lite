@@ -64,7 +64,6 @@ class Van {
   void Stop();
 
  private:
-
   /**
    * \return interal version without ready check
    */

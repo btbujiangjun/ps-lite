@@ -14,10 +14,16 @@ using Key = uint64_t;
 /*! \brief The maximal allowed key value */
 static const Key kMaxKey = std::numeric_limits<Key>::max();
 
-/* \brief node ID for the scheduler */
+/** \brief node ID for the scheduler */
 const static int kScheduler = 1;
 
-/** \brief the server node group ID */
+/**
+ * \brief the server node group ID
+ *
+ * group id can be combined:
+ * - kServerGroup + kScheduler means all server nodes and the scheuduler
+ * - kServerGroup + kWorkerGroup means all server and worker nodes
+ */
 const static int kServerGroup = 2;
 
 /** \brief the worker node group ID */

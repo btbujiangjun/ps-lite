@@ -9,19 +9,44 @@
 #include "ps/internal/threadsafe_queue.h"
 namespace ps {
 
+/**
+ * \brief The object for communication.
+ *
+ * As a sender, a customer tracks the responses for each request sent.
+ *
+ * It has its own receiving thread which is able to process any message received
+ * from a remote node with `msg.meta.customer_id()` equal to this customer's id
+ */
 class Customer {
  public:
+
+  /**
+   * \brief the handle for a received message
+   * \param recved the received message
+   */
   using RecvHandle = std::function<void(const Message& recved)>;
-  Customer() { }
+
+  /**
+   * \brief constructor
+   * \param id the unique id, any received message with
+   * \param recv_handle the functino for processing a received message
+   */
   Customer(int id, const RecvHandle& recv_handle);
 
+  /**
+   * \brief desconstructor
+   */
   ~Customer();
 
+  /**
+   * \brief return the unique id
+   */
   int id() { return id_; }
 
   /**
-   * \brief call before issuing a request. threadsafe
-   * \return return the timestamp of this request
+   * \brief get a timestamp for a new request. threadsafe
+   * \param recver the receive node id of this request
+   * \return the timestamp of this request
    */
   int NewRequest(int recver);
 
@@ -39,7 +64,7 @@ class Customer {
   int NumResponse(int timestamp);
 
   /**
-   * \brief
+   * \brief add a number of responses to timestamp
    */
   void AddResponse(int timestamp, int num = 1);
 
@@ -48,8 +73,13 @@ class Customer {
    * \param recved the received the message
    */
   void Accept(const Message& recved) { recv_queue_.Push(recved); }
+
  private:
+  /**
+   * \brief the thread function
+   */
   void Receiving();
+
   int id_;
 
   RecvHandle recv_handle_;
@@ -60,6 +90,7 @@ class Customer {
   std::condition_variable tracker_cond_;
   std::vector<std::pair<int, int>> tracker_;
 
+  DISALLOW_COPY_AND_ASSIGN(Customer);
 };
 
 }  // namespace ps
