@@ -4,19 +4,20 @@ using namespace ps;
 void StartServer() {
   if (!IsServer()) return;
   using Server = KVServer<float>;
-  auto handle = [](const KVMeta& req_meta,
-                   const KVPairs<float>& req_data,
-                   Server* server) {
-    LOG(ERROR) << req_data.keys;
-    if (req_meta.push) {
+  // auto handle = [](const KVMeta& req_meta,
+  //                  const KVPairs<float>& req_data,
+  //                  Server* server) {
+  //   LOG(ERROR) << req_data.keys;
+  //   if (req_meta.push) {
 
-    } else {
+  //   } else {
 
-    }
-    server->Response(req_meta);
-  };
+  //   }
+  //   server->Response(req_meta);
+  // };
   auto server = new Server(0);
-  server->set_request_handle(handle);
+  // server->set_request_handle(handle);
+  server->set_request_handle(KVServerDefaultHandle<float>());
   RegisterExitCallback([server](){ delete server; });
 }
 
@@ -31,8 +32,7 @@ void RunWorker() {
 
   kv.Wait(kv.Push(keys, vals));
   LL << "xx";
-  // kv.Wait(kv.Pull(keys, &rets));
-
+  kv.Wait(kv.Pull(keys, &rets));
   LOG(ERROR) << SArray<float>(rets);
 }
 

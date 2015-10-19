@@ -314,6 +314,34 @@ class KVServer : public SimpleApp {
 };
 
 
+/**
+ * \brief an example handle adding pushed kv into store
+ */
+template <typename Val>
+struct KVServerDefaultHandle {
+  void operator()(
+      const KVMeta& req_meta, const KVPairs<Val>& req_data, KVServer<Val>* server) {
+    size_t n = req_data.keys.size();
+    KVPairs<Val> res;
+    if (req_meta.push) {
+      CHECK_EQ(n, req_data.vals.size());
+    } else {
+      res.keys = req_data.keys; res.vals.resize(n);
+    }
+    for (size_t i = 0; i < n; ++i) {
+      Key key = req_data.keys[i];
+      if (req_meta.push) {
+        store[key] += req_data.vals[i];
+      } else {
+        res.vals[i] = store[key];
+      }
+    }
+    server->Response(req_meta, res);
+  }
+  std::unordered_map<Key, Val> store;
+};
+
+
 ///////////////////////////////////////////////////////////////////////////////
 
 template <typename Val>
@@ -459,7 +487,7 @@ void KVWorker<Val>::Process(const Message& msg) {
   // store the data for pulling
   int ts = msg.meta.timestamp();
   if (!msg.meta.push() && msg.data.size()) {
-    CHECK_GT(msg.data.size(), (size_t)2);
+    CHECK_GE(msg.data.size(), (size_t)2);
     KVPairs<Val> kvs;
     kvs.keys = msg.data[0];
     kvs.vals = msg.data[1];
@@ -536,7 +564,7 @@ int KVWorker<Val>::Pull_(
       mu_.lock();
       recv_kvs_.erase(ts);
       mu_.unlock();
-      cb();
+      if (cb) cb();
     });
 
   KVPairs<Val> kvs; kvs.keys = keys;
