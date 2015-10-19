@@ -80,7 +80,7 @@ class Postoffice {
 
   int num_servers() const { return num_servers_; }
 
-  int rank() const { return IDtoRank(van_->my_node().id()); }
+  int my_rank() const { return IDtoRank(van_->my_node().id()); }
 
   int is_worker() const { return is_worker_; }
 

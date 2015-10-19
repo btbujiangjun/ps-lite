@@ -361,7 +361,7 @@ int Van::Recv(Message* msg) {
     } else {
       // zero-copy
       SArray<char> data;
-      data.reset(buf, size, [zmsg](char*) {
+      data.reset(buf, size, [zmsg,size](char*) {
           zmq_msg_close(zmsg);
           delete zmsg;
         });
@@ -439,7 +439,6 @@ void Van::Receiving() {
           CHECK(ctrl.has_barrier_group());
           int group = ctrl.barrier_group();
           ++ barrier_count_[group];
-          LOG(ERROR) << barrier_count_[group];
           if (barrier_count_[group] ==
               (int)Postoffice::Get()->GetNodeIDs(group).size()) {
             barrier_count_[group] = 0;
@@ -463,7 +462,6 @@ void Van::Receiving() {
       auto* obj = Postoffice::Get()->GetCustomer(id, 5);
       CHECK(obj) << "timeout (5 sec) to wait App " << id << " ready";
       obj->Accept(msg);
-      LL << msg.data.size();
     }
   }
 }

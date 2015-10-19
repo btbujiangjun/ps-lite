@@ -30,7 +30,7 @@ int NumWorkers() { return Postoffice::Get()->num_workers(); }
 int NumServers() { return Postoffice::Get()->num_servers(); }
 
 /** \brief Returns the rank of this node in its group */
-int Rank() { return Postoffice::Get()->rank(); }
+int MyRank() { return Postoffice::Get()->my_rank(); }
 
 /** \brief Returns true if this node is a worker node */
 bool IsWorker() { return Postoffice::Get()->is_worker(); }

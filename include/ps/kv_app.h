@@ -350,7 +350,6 @@ void KVServer<Val>::Process(const Message& msg) {
     SimpleApp::Process(msg); return;
   }
 
-    LOG(ERROR) << "xxx";
   KVMeta meta;
   meta.cmd = msg.meta.head();
   meta.push = msg.meta.push();
@@ -499,7 +498,6 @@ void KVWorker<Val>::Process(const Message& msg) {
     mu_.unlock();
   }
 
-  LOG(ERROR) << obj_->NumResponse(ts) ;
   // finished, run callbacks
   if (obj_->NumResponse(ts) == Postoffice::Get()->num_servers() - 1)  {
     mu_.lock();
@@ -522,7 +520,7 @@ template <typename C, typename D>
 int KVWorker<Val>::Pull_(
     const SArray<Key>& keys, C* vals, D* lens, int cmd, const Callback& cb) {
   int ts = obj_->NewRequest(kServerGroup);
-  AddCallback(ts, [this, ts, keys, vals, lens, cb]() {
+  AddCallback(ts, [this, ts, keys, vals, lens, cb]() mutable {
       mu_.lock();
       auto& kvs = recv_kvs_[ts];
       mu_.unlock();
