@@ -18,7 +18,7 @@ template<typename V>
 class SArray {
  public:
   /** \brief empty constructor */
-  SArray() : size_(0), capacity_(0) { }
+  SArray() { }
 
   /** \brief empty deconstrcutor */
   ~SArray() { }
@@ -221,8 +221,8 @@ class SArray {
   }
 
  private:
-  size_t size_;
-  size_t capacity_;
+  size_t size_ = 0;
+  size_t capacity_ = 0;
   std::shared_ptr<V> ptr_;
 };
 

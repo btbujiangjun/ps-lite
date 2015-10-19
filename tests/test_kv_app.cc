@@ -8,6 +8,12 @@ void StartServer() {
                    const KVPairs<float>& req_data,
                    Server* server) {
     LOG(ERROR) << req_data.keys;
+    if (req_meta.push) {
+
+    } else {
+
+    }
+    server->Response(req_meta);
   };
   auto server = new Server(0);
   server->set_request_handle(handle);
@@ -24,7 +30,8 @@ void RunWorker() {
   std::vector<float> rets;
 
   kv.Wait(kv.Push(keys, vals));
-  kv.Wait(kv.Pull(keys, &rets));
+  LL << "xx";
+  // kv.Wait(kv.Pull(keys, &rets));
 
   LOG(ERROR) << SArray<float>(rets);
 }

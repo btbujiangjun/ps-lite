@@ -463,6 +463,7 @@ void Van::Receiving() {
       auto* obj = Postoffice::Get()->GetCustomer(id, 5);
       CHECK(obj) << "timeout (5 sec) to wait App " << id << " ready";
       obj->Accept(msg);
+      LL << msg.data.size();
     }
   }
 }

@@ -38,5 +38,6 @@ inline V GetEnv(const char *key, V default_val) {
   void operator=(const TypeName&)
 #endif
 
+#define LL LOG(ERROR)
 
 }  // namespace ps

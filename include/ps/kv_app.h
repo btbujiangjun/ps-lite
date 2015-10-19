@@ -322,6 +322,7 @@ void KVServer<Val>::Process(const Message& msg) {
     SimpleApp::Process(msg); return;
   }
 
+    LOG(ERROR) << "xxx";
   KVMeta meta;
   meta.cmd = msg.meta.head();
   meta.push = msg.meta.push();
@@ -409,12 +410,12 @@ void KVWorker<Val>::DefaultSlicer(
     auto& kv = sliced->at(i).second;
     kv.keys = send.keys.segment(pos[i], pos[i+1]);
     if (send.lens.size()) {
-      kv.vals = send.vals.segment(pos[i]*k, pos[i+1]*k);
-    } else {
       kv.lens = send.lens.segment(pos[i], pos[i+1]);
       for (int l : kv.lens) val_end += l;
       kv.vals = send.vals.segment(val_begin, val_end);
       val_begin = val_end;
+    } else {
+      kv.vals = send.vals.segment(pos[i]*k, pos[i+1]*k);
     }
   }
 }
@@ -441,9 +442,10 @@ void KVWorker<Val>::Send(int timestamp, bool push, int cmd, const KVPairs<Val>& 
         msg.AddData(kvs.lens);
       }
     }
-    msg.recver = i;
+    msg.recver = Postoffice::Get()->ServerRankToID(i);
     Postoffice::Get()->van()->Send(msg);
   }
+
   obj_->AddResponse(timestamp, skipped);
 }
 
@@ -469,6 +471,7 @@ void KVWorker<Val>::Process(const Message& msg) {
     mu_.unlock();
   }
 
+  LOG(ERROR) << obj_->NumResponse(ts) ;
   // finished, run callbacks
   if (obj_->NumResponse(ts) == Postoffice::Get()->num_servers() - 1)  {
     mu_.lock();
