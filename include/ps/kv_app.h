@@ -541,11 +541,20 @@ int KVWorker<Val>::Pull_(
           const KVPairs<Val>& a, const KVPairs<Val>& b) {
                   return a.keys.front() < b.keys.front();
         });
-      CHECK_NOTNULL(vals)->resize(total_val);
+      CHECK_NOTNULL(vals);
+      if (vals->empty()) {
+        vals->resize(total_val);
+      } else {
+        CHECK_EQ(vals->size(), total_val);
+      }
       Val* p_vals = vals->data();
       int *p_lens = nullptr;
       if (lens) {
-        lens->resize(keys.size());
+        if (lens->empty()) {
+          lens->resize(keys.size());
+        } else {
+          CHECK_EQ(lens->size(), keys.size());
+        }
         p_lens = lens->data();
       }
       for (const auto& s : kvs) {
@@ -556,7 +565,6 @@ int KVWorker<Val>::Pull_(
           p_lens += s.lens.size();
         }
       }
-      // keys.clear(); // make sure it is delete
 
       mu_.lock();
       recv_kvs_.erase(ts);

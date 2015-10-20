@@ -1,0 +1,9 @@
+build
+deps
+*.pb.cc
+.*
+*core*
+doc/html
+doc/latex
+tests/test_*
+*.d

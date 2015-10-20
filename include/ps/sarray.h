@@ -93,7 +93,6 @@ class SArray {
   template <typename ForwardIt>
   void CopyFrom(const ForwardIt& first, const ForwardIt& last) {
     int size = (int)std::distance(first, last);
-    LL << size;
     V* data = new V[size];
     reset(data, size, [](V* data){ delete [] data; });
     auto it = first;
