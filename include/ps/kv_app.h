@@ -499,7 +499,6 @@ void KVWorker<Val>::Process(const Message& msg) {
 
   // store the data for pulling
   int ts = msg.meta.timestamp();
-  if (msg.meta.push()) LL << Postoffice::Get()->my_rank() << " time " << ts;
   if (!msg.meta.push() && msg.data.size()) {
     CHECK_GE(msg.data.size(), (size_t)2);
     KVPairs<Val> kvs;
