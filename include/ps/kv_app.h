@@ -231,6 +231,12 @@ class KVWorker : public SimpleApp {
     std::lock_guard<std::mutex> lk(mu_);
     callbacks_[timestamp] = cb;
   }
+
+  /**
+   * \brief run and delete the callback
+   * \param timestamp the timestamp of the callback
+   */
+  void RunCallback(int timestamp);
   /**
    * \brief send the kv list to all servers
    * @param timestamp the timestamp of the request
@@ -448,12 +454,23 @@ void KVWorker<Val>::DefaultSlicer(
 
 template <typename Val>
 void KVWorker<Val>::Send(int timestamp, bool push, int cmd, const KVPairs<Val>& kvs) {
+  // slice the message
   SlicedKVs sliced;
   slicer_(kvs, Postoffice::Get()->GetServerKeyRanges(), &sliced);
+
+  // need to add response first, since it will not always trigger the callback
   int skipped = 0;
   for (size_t i = 0; i < sliced.size(); ++i) {
+    if (!sliced[i].first) ++ skipped;
+  }
+  obj_->AddResponse(timestamp, skipped);
+  if ((size_t)skipped == sliced.size()) {
+    RunCallback(timestamp);
+  }
+
+  for (size_t i = 0; i < sliced.size(); ++i) {
     const auto& s = sliced[i];
-    if (!s.first) { ++ skipped; continue; }
+    if (!s.first) continue;
     Message msg;
     msg.meta.set_customer_id(obj_->id());
     msg.meta.set_request(true);
@@ -471,8 +488,6 @@ void KVWorker<Val>::Send(int timestamp, bool push, int cmd, const KVPairs<Val>& 
     msg.recver = Postoffice::Get()->ServerRankToID(i);
     Postoffice::Get()->van()->Send(msg);
   }
-
-  obj_->AddResponse(timestamp, skipped);
 }
 
 
@@ -484,6 +499,7 @@ void KVWorker<Val>::Process(const Message& msg) {
 
   // store the data for pulling
   int ts = msg.meta.timestamp();
+  if (msg.meta.push()) LL << Postoffice::Get()->my_rank() << " time " << ts;
   if (!msg.meta.push() && msg.data.size()) {
     CHECK_GE(msg.data.size(), (size_t)2);
     KVPairs<Val> kvs;
@@ -499,19 +515,23 @@ void KVWorker<Val>::Process(const Message& msg) {
 
   // finished, run callbacks
   if (obj_->NumResponse(ts) == Postoffice::Get()->num_servers() - 1)  {
-    mu_.lock();
-    auto it = callbacks_.find(ts);
-    if (it != callbacks_.end()) {
-      mu_.unlock();
-
-      CHECK(it->second);
-      it->second();
-
-      mu_.lock();
-      callbacks_.erase(it);
-    }
-    mu_.unlock();
+    RunCallback(ts);
   }
+}
+template <typename Val>
+void KVWorker<Val>::RunCallback(int timestamp) {
+  mu_.lock();
+  auto it = callbacks_.find(timestamp);
+  if (it != callbacks_.end()) {
+    mu_.unlock();
+
+    CHECK(it->second);
+    it->second();
+
+    mu_.lock();
+    callbacks_.erase(it);
+  }
+  mu_.unlock();
 }
 
 template <typename Val>
