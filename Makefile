@@ -65,7 +65,7 @@ build/%.o: include/ps/internal/%.cc
 # deps
 include make/deps.mk
 
-deps: gflags glog protobuf zmq lz4 cityhash
+deps: glog protobuf zmq
 
 # test
 

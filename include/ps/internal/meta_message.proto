@@ -21,7 +21,7 @@ message MetaMessage {
   // whether or not a push message
   optional bool push = 9;
   // whether or not it's for SimpleApp
-  optional bool simple_app = 10;
+  optional bool simple_app = 10 [default = false];
 }
 
 // system control info

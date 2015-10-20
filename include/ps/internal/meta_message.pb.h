@@ -182,7 +182,7 @@ class MetaMessage : public ::google::protobuf::Message {
   inline bool push() const;
   inline void set_push(bool value);
 
-  // optional bool simple_app = 10;
+  // optional bool simple_app = 10 [default = false];
   inline bool has_simple_app() const;
   inline void clear_simple_app();
   static const int kSimpleAppFieldNumber = 10;
@@ -611,7 +611,7 @@ inline void MetaMessage::set_push(bool value) {
   push_ = value;
 }
 
-// optional bool simple_app = 10;
+// optional bool simple_app = 10 [default = false];
 inline bool MetaMessage::has_simple_app() const {
   return (_has_bits_[0] & 0x00000100u) != 0;
 }

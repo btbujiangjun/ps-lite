@@ -349,7 +349,6 @@ void KVServer<Val>::Process(const Message& msg) {
   if (msg.meta.simple_app()) {
     SimpleApp::Process(msg); return;
   }
-
   KVMeta meta;
   meta.cmd = msg.meta.head();
   meta.push = msg.meta.push();

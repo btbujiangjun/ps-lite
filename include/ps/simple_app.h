@@ -86,9 +86,18 @@ class SimpleApp {
     response_handle_ = response_handle;
   }
 
+  /**
+   * \brief returns the customer
+   */
+  Customer* get_customer() { return obj_; }
  protected:
   /** \brief empty construct */
-  SimpleApp() : obj_(nullptr) { }
+  SimpleApp() : obj_(nullptr) {
+    request_handle_ = [](const SimpleData& recved, SimpleApp* app) {
+      app->Response(recved);
+    };
+    response_handle_ = [](const SimpleData& recved, SimpleApp* app) { };
+  }
 
   /** \brief process a received message */
   void Process(const Message& msg);
@@ -105,13 +114,9 @@ class SimpleApp {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-SimpleApp::SimpleApp(int app_id) {
+SimpleApp::SimpleApp(int app_id) : SimpleApp() {
   using namespace std::placeholders;
   obj_ = new Customer(app_id, std::bind(&SimpleApp::Process, this, _1));
-  request_handle_ = [](const SimpleData& recved, SimpleApp* app) {
-    app->Response(recved);
-  };
-  response_handle_ = [](const SimpleData& recved, SimpleApp* app) { };
 }
 
 int SimpleApp::Request(int req_head, const std::string& req_body, int recv_id) {
@@ -156,8 +161,10 @@ void SimpleApp::Process(const Message& msg) {
   recv.body      = msg.meta.body();
   recv.timestamp = msg.meta.timestamp();
   if (msg.meta.request()) {
+    CHECK(request_handle_);
     request_handle_(recv, this);
   } else {
+    CHECK(response_handle_);
     response_handle_(recv, this);
   }
 }
